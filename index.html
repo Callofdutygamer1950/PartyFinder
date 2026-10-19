@@ -82,9 +82,9 @@
         <input type="text" id="searchInput" oninput="filterParties()" placeholder="Search party or location..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition">
       </div>
       <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-        <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-purple-600 text-white">All</button>
-        <button onclick="setFilter('PARTY')" id="filter-PARTY" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800">Active Parties</button>
-        <button onclick="setFilter('QUIET')" id="filter-QUIET" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800">Quiet Parties</button>
+        <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-purple-600 text-white transition">All</button>
+        <button onclick="setFilter('PARTY')" id="filter-PARTY" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">Active Parties</button>
+        <button onclick="setFilter('QUIET')" id="filter-QUIET" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">Quiet Parties</button>
       </div>
     </div>
 
@@ -313,6 +313,7 @@
     let map = null;
     let tempPickerMarker = null;
     let isSelectingLocation = false;
+    let mapMarkers = [];
 
     const DEFAULT_LAT = 41.0638;
     const DEFAULT_LNG = -80.0528;
@@ -333,6 +334,49 @@
       populateDropdown();
       if (map) updateMapLayers();
       lucide.createIcons();
+    }
+
+    // Streamlined Cards
+    function renderPartiesGrid() {
+      const grid = document.getElementById('partiesGrid');
+      grid.innerHTML = '';
+
+      const partyList = Object.values(partiesData);
+      if (partyList.length === 0) {
+        grid.innerHTML = `<div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40"><p class="text-sm text-gray-300 font-semibold">No Active Parties Listed</p></div>`;
+        return;
+      }
+
+      partyList.forEach(party => {
+        if (activeFilter === 'PARTY' && party.status !== 'ACTIVE PARTY') return;
+        if (activeFilter === 'QUIET' && party.status !== 'QUIET') return;
+
+        const isParty = party.status === 'ACTIVE PARTY';
+        const totalReports = party.crowdReportCount || 0;
+        const avgCrowd = Math.min(totalReports > 0 ? Math.round((party.crowdTotalSum || 0) / totalReports) : 0, 2000);
+
+        const card = document.createElement('div');
+        card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 cursor-pointer transition`;
+        card.onclick = () => openPartyDetailsModal(party.id);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${party.status}</span>
+            </div>
+            ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
+            <div class="flex items-center gap-4 text-xs text-gray-400">
+              <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>
+              <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdated)}</span>
+            </div>
+          </div>
+          <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4 text-xs text-purple-400 font-semibold">
+            <span>View Details & Comments →</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
     }
 
     // Leaflet OpenStreetMap with CSS Dark Matter Filter
@@ -368,6 +412,37 @@
       updateMapLayers();
     }
 
+    function updateMapLayers() {
+      if (!map) return;
+      mapMarkers.forEach(m => map.removeLayer(m));
+      mapMarkers = [];
+
+      Object.values(partiesData).forEach(party => {
+        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.01;
+        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.01;
+        const isParty = party.status === 'ACTIVE PARTY';
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: isParty ? 10 : 6,
+          fillColor: isParty ? '#ec4899' : '#6b7280',
+          color: isParty ? '#f472b6' : '#4b5563',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="color: #000; font-size: 12px;">
+            <strong>${escapeHtml(party.name)}</strong><br>
+            Status: ${party.status}
+          </div>
+        `);
+
+        marker.on('click', () => openPartyDetailsModal(party.id));
+        mapMarkers.push(marker);
+      });
+    }
+
     function startMapLocationSelection() {
       closeProposeModal();
       switchView('map');
@@ -378,6 +453,44 @@
     function cancelMapSelection() {
       isSelectingLocation = false;
       document.getElementById('mapSelectBanner').classList.add('hidden');
+    }
+
+    // Dynamic UI Button Highlight Switching
+    function switchView(view) {
+      const grid = document.getElementById('partiesGrid');
+      const mapContainer = document.getElementById('mapViewContainer');
+      const gridBtn = document.getElementById('viewGridBtn');
+      const mapBtn = document.getElementById('viewMapBtn');
+
+      const activeClass = "px-2.5 py-1 text-xs rounded-md font-semibold bg-purple-600 text-white transition flex items-center gap-1";
+      const inactiveClass = "px-2.5 py-1 text-xs rounded-md font-semibold text-gray-400 hover:text-white transition flex items-center gap-1";
+
+      if (view === 'map') {
+        grid.classList.add('hidden');
+        mapContainer.classList.remove('hidden');
+        gridBtn.className = inactiveClass;
+        mapBtn.className = activeClass;
+        initMap();
+        setTimeout(() => map.invalidateSize(), 200);
+      } else {
+        grid.classList.remove('hidden');
+        mapContainer.classList.add('hidden');
+        gridBtn.className = activeClass;
+        mapBtn.className = inactiveClass;
+      }
+    }
+
+    function setFilter(filter) {
+      activeFilter = filter;
+      
+      const activePill = "filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-purple-600 text-white transition";
+      const inactivePill = "filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition";
+
+      document.getElementById('filter-ALL').className = filter === 'ALL' ? activePill : inactivePill;
+      document.getElementById('filter-PARTY').className = filter === 'PARTY' ? activePill : inactivePill;
+      document.getElementById('filter-QUIET').className = filter === 'QUIET' ? activePill : inactivePill;
+
+      renderUI();
     }
 
     // Fundraiser Management
@@ -422,19 +535,42 @@
     function openFeedbackModal() { document.getElementById('feedbackModal').classList.remove('hidden'); }
     function closeFeedbackModal() { document.getElementById('feedbackModal').classList.add('hidden'); }
 
-    // Navigation & View Helpers
-    function switchView(view) {
-      const grid = document.getElementById('partiesGrid');
-      const mapContainer = document.getElementById('mapViewContainer');
-      if (view === 'map') {
-        grid.classList.add('hidden');
-        mapContainer.classList.remove('hidden');
-        initMap();
-        setTimeout(() => map.invalidateSize(), 200);
+    // Helpers & Utilities
+    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+    function timeAgo(dateString) {
+      if (!dateString) return 'just now';
+      const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+      if (seconds < 60) return `${seconds}s ago`;
+      const minutes = Math.floor(seconds / 60);
+      return `${minutes}m ago`;
+    }
+
+    function openPartyDetailsModal(partyId) {
+      selectedPartyId = partyId;
+      const party = partiesData[partyId];
+      if (!party) return;
+
+      document.getElementById('modalPartyTitle').textContent = party.name;
+      document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
+
+      const commentContainer = document.getElementById('modalCommentContainer');
+      if (party.latestComment) {
+        commentContainer.innerHTML = `
+          <div>
+            <p class="text-xs text-gray-200 italic">"${escapeHtml(party.latestComment)}"</p>
+            <p class="text-[10px] text-gray-500 mt-1">Posted ${timeAgo(party.commentTimestamp)}</p>
+          </div>
+        `;
       } else {
-        grid.classList.remove('hidden');
-        mapContainer.classList.add('hidden');
+        commentContainer.innerHTML = `<p class="text-gray-500 italic text-center">No active comments posted yet.</p>`;
       }
+
+      document.getElementById('partyDetailsModal').classList.remove('hidden');
+    }
+
+    function closePartyDetailsModal() {
+      document.getElementById('partyDetailsModal').classList.add('hidden');
+      selectedPartyId = null;
     }
 
     function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
@@ -443,6 +579,17 @@
     function closeProposeModal() { document.getElementById('proposeModal').classList.add('hidden'); }
     function openHostPanel() { document.getElementById('hostModal').classList.remove('hidden'); }
     function closeHostModal() { document.getElementById('hostModal').classList.add('hidden'); }
+
+    function populateDropdown() {
+      const select = document.getElementById('reportPartySelect');
+      select.innerHTML = '';
+      Object.values(partiesData).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+    }
 
     document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
   </script>
