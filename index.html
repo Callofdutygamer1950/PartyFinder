@@ -200,22 +200,10 @@
     let partiesData = {};
     let activeFilter = 'ALL';
 
-    // Default Seed Data
-    const defaultParties = {
-      "p1": { id: "p1", name: "The Compound", location: "402 N Elm St", status: "ACTIVE PARTY", headcount: 45, votes: 12, quietCount: 0, lastUpdated: new Date().toISOString() },
-      "p2": { id: "p2", name: "Alpha House", location: "", status: "QUIET", headcount: 0, votes: 4, quietCount: 0, lastUpdated: new Date().toISOString() },
-      "p3": { id: "p3", name: "Sigma Loft", location: "88 College St", status: "ACTIVE PARTY", headcount: 80, votes: 19, quietCount: 0, lastUpdated: new Date().toISOString() }
-    };
-
     // Initialize Database Sync
     db.ref('parties').on('value', (snapshot) => {
       const data = snapshot.val();
-      if (!data) {
-        db.ref('parties').set(defaultParties);
-        partiesData = defaultParties;
-      } else {
-        partiesData = data;
-      }
+      partiesData = data || {};
       renderUI();
     });
 
@@ -231,7 +219,20 @@
       const search = document.getElementById('searchInput').value.toLowerCase();
       grid.innerHTML = '';
 
-      Object.values(partiesData).forEach(party => {
+      const partyList = Object.values(partiesData);
+
+      if (partyList.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40">
+            <i data-lucide="sparkles" class="w-8 h-8 text-purple-400 mx-auto mb-3 opacity-60"></i>
+            <p class="text-sm text-gray-300 font-semibold mb-1">No Active Parties Listed</p>
+            <p class="text-xs text-gray-500">Propose a new party or check back once the host approves submissions.</p>
+          </div>
+        `;
+        return;
+      }
+
+      partyList.forEach(party => {
         if (activeFilter === 'PARTY' && party.status !== 'ACTIVE PARTY') return;
         if (activeFilter === 'QUIET' && party.status !== 'QUIET') return;
         if (search && !party.name.toLowerCase().includes(search) && !(party.location && party.location.toLowerCase().includes(search))) return;
@@ -306,6 +307,11 @@
     function handleStatusSubmit(e) {
       e.preventDefault();
       const partyId = document.getElementById('reportPartySelect').value;
+      if (!partyId) {
+        alert("Please select a party first.");
+        return;
+      }
+
       const statusType = document.querySelector('input[name="statusType"]:checked').value;
       const headcountInput = document.getElementById('reportHeadcount').value;
 
@@ -440,7 +446,17 @@
     function populateDropdown() {
       const select = document.getElementById('reportPartySelect');
       select.innerHTML = '';
-      Object.values(partiesData).forEach(p => {
+      const partyList = Object.values(partiesData);
+
+      if (partyList.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '-- No parties available yet --';
+        select.appendChild(opt);
+        return;
+      }
+
+      partyList.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.location ? `${p.name} (${p.location})` : p.name;
