@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Party Finder - Live Venue Status Tracker</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              green: '#00ff87',
+              red: '#ff0055',
+              yellow: '#ffcc00',
+              dark: '#0a0d14',
+              card: '#121824',
+              border: '#1f293d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #0a0d14;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0d14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f293d;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+
+    .glass-card {
+      background: rgba(18, 24, 36, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glass-card:hover {
+      border-color: rgba(0, 255, 135, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    .border-status-active { border-left: 4px solid #00ff87; }
+    .border-status-quiet { border-left: 4px solid #ff0055; }
+    .border-status-unknown { border-left: 4px solid #ffcc00; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-brand-green selection:text-black">
+
+  <!-- Header / Navigation Bar -->
+  <header class="sticky top-0 z-40 border-b border-brand-border bg-brand-dark/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="relative flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-950/60 border border-brand-green/40 text-brand-green">
+          <i data-lucide="radio" class="w-6 h-6 animate-pulse"></i>
+          <span class="absolute -top-1 -right-1 flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-brand-green"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-black tracking-wider text-white uppercase font-mono">PARTY<span class="text-brand-green">FINDER</span></h1>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-brand-green border border-brand-green/30 font-mono">LIVE TRACKER</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">COMMUNITY VENUE STATUS</p>
+        </div>
+      </div>
+
+      <!-- Header Controls -->
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-4 text-xs font-mono px-3 py-1.5 rounded-lg bg-brand-card border border-brand-border text-slate-300">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-brand-green"></span>
+            <span id="activeCount">0</span> Active
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-brand-red"></span>
+            <span id="quietCount">0</span> Quiet
+          </div>
+        </div>
+
+        <button onclick="openNewVenueModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-brand-green/40 text-brand-green text-xs font-mono transition-all font-bold">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>PROPOSE VENUE</span>
+        </button>
+
+        <button id="refreshBtn" onclick="manualRefresh()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-card hover:bg-slate-800 border border-brand-border text-slate-200 text-xs font-mono transition-all">
+          <i data-lucide="refresh-cw" id="refreshIcon" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">REFRESH</span>
+        </button>
+
+        <!-- Admin Control Toggle Button -->
+        <button onclick="toggleAdminPanel()" id="adminToggleBtn" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-brand-border text-slate-200 font-mono text-xs transition-all relative">
+          <i data-lucide="shield-check" class="w-4 h-4 text-brand-green"></i>
+          <span>HOST PANEL</span>
+          <span id="pendingBadge" class="hidden absolute -top-1.5 -right-1.5 bg-brand-red text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Information Banner -->
+    <div class="glass-card rounded-xl p-4 sm:p-6 border border-brand-border relative overflow-hidden">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+        <div class="space-y-1">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="map-pin" class="w-5 h-5 text-brand-green"></i>
+            Live Community Nightlife & Party Tracker
+          </h2>
+          <p class="text-sm text-slate-400 max-w-2xl">
+            Check live crowd sizes and party activity before heading out. Live status updates update automatically, while new venue requests require host verification. Note: Changing an Active venue to Quiet requires <strong>3 community reports</strong> to prevent false alerts.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="scrollToReportSection()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-brand-border text-brand-green text-xs font-mono font-bold flex items-center gap-2 transition-all">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            SUBMIT UPDATE
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Review Drawer (Host Only for New Venues) -->
+    <div id="adminPanel" class="hidden glass-card rounded-xl p-5 border border-brand-green/40 bg-emerald-950/20 space-y-4">
+      <div class="flex items-center justify-between border-b border-brand-border/80 pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="shield-alert" class="w-5 h-5 text-brand-green"></i>
+          <h3 class="font-mono font-bold text-white text-sm uppercase">Pending New Venue Requests (Host Approval)</h3>
+        </div>
+        <span class="text-xs text-slate-400 font-mono" id="pendingQueueCount">0 venues waiting</span>
+      </div>
+
+      <div id="pendingList" class="space-y-3">
+        <!-- Pending Items Rendered Dynamically -->
+      </div>
+    </div>
+
+    <!-- Search, Filter & Controls Bar -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      
+      <!-- Search Input -->
+      <div class="md:col-span-5 relative">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Search venue name or area..." 
+          oninput="renderVenues()"
+          class="w-full pl-10 pr-4 py-2.5 bg-brand-card border border-brand-border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-green/50 transition-all"
+        />
+      </div>
+
+      <!-- Filter Buttons -->
+      <div class="md:col-span-4 flex items-center bg-brand-card border border-brand-border rounded-lg p-1">
+        <button onclick="setFilter('ALL')" id="filterBtnALL" class="flex-1 py-1.5 text-xs font-mono font-medium rounded-md text-white bg-slate-800 transition-all">
+          ALL (<span id="countAll">0</span>)
+        </button>
+        <button onclick="setFilter('ACTIVE')" id="filterBtnACTIVE" class="flex-1 py-1.5 text-xs font-mono font-medium rounded-md text-slate-400 hover:text-white transition-all">
+          ACTIVE (<span id="countActive">0</span>)
+        </button>
+        <button onclick="setFilter('QUIET')" id="filterBtnQUIET" class="flex-1 py-1.5 text-xs font-mono font-medium rounded-md text-slate-400 hover:text-white transition-all">
+          QUIET (<span id="countQuiet">0</span>)
+        </button>
+      </div>
+
+      <!-- Sorting Selector -->
+      <div class="md:col-span-3">
+        <select id="sortSelect" onchange="renderVenues()" class="w-full py-2.5 px-3 bg-brand-card border border-brand-border rounded-lg text-sm text-slate-200 font-mono focus:outline-none focus:border-brand-green/50 transition-all">
+          <option value="recent">Sort: Most Recent Update</option>
+          <option value="headcount">Sort: Highest Crowd</option>
+          <option value="votes">Sort: Highest Reliability</option>
+          <option value="name">Sort: Venue Name A-Z</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Main Layout: Venue Grid & Submission Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Directory Cards Grid -->
+      <div class="lg:col-span-2 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <i data-lucide="building" class="w-4 h-4 text-brand-green"></i>
+            Active Locations
+          </h3>
+          <span class="text-xs text-slate-500 font-mono" id="showingCount">Showing 0 locations</span>
+        </div>
+
+        <!-- Cards Container -->
+        <div id="venueGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamically Rendered Cards -->
+        </div>
+
+        <!-- Empty State Message -->
+        <div id="emptyState" class="hidden glass-card rounded-xl p-8 text-center space-y-3">
+          <i data-lucide="map-pin-off" class="w-10 h-10 mx-auto text-slate-600"></i>
+          <h4 class="text-base font-bold text-slate-300">No Venues Found</h4>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">Try adjusting your filter parameters or search terms.</p>
+        </div>
+      </div>
+
+      <!-- Right Column: Submission Form & Recent Updates Feed -->
+      <div class="space-y-6">
+        
+        <!-- Status Submission Form -->
+        <div id="reportSection" class="glass-card rounded-xl p-5 border border-brand-border space-y-4 relative">
+          <div class="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <h3 class="text-sm font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+              <i data-lucide="send" class="w-4 h-4 text-brand-green"></i>
+              Submit Live Update
+            </h3>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-brand-green border border-brand-green/30 font-mono font-bold">100% ANONYMOUS</span>
+          </div>
+
+          <!-- Explicit Anonymous Disclaimer Box -->
+          <div class="p-3 rounded-lg bg-slate-900/90 border border-brand-border/80 text-xs text-slate-300 space-y-1 font-mono">
+            <div class="flex items-center gap-1.5 text-brand-green font-bold">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+              <span>PRIVACY & LIVE UPDATE POLICY</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Submissions are <strong>100% anonymous</strong>. Updates for existing venues process automatically. To flip an Active venue to Quiet, <strong>3 consecutive Quiet reports</strong> are required to avoid false reports.
+            </p>
+          </div>
+
+          <form id="statusForm" onsubmit="handleStatusSubmit(event)" class="space-y-3.5">
+            <!-- Venue Selector -->
+            <div>
+              <label class="block text-xs font-mono text-slate-400 mb-1">SELECT VENUE *</label>
+              <select id="reportVenueSelect" required class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-green">
+                <!-- Dynamically Populated -->
+              </select>
+            </div>
+
+            <!-- Status Choice -->
+            <div>
+              <label class="block text-xs font-mono text-slate-400 mb-1">CURRENT STATUS *</label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="flex items-center justify-center gap-2 p-2.5 rounded-lg border border-brand-border bg-slate-900 cursor-pointer hover:bg-slate-800 transition-all text-xs font-bold font-mono text-emerald-400 has-[:checked]:border-brand-green has-[:checked]:bg-emerald-950/40">
+                  <input type="radio" name="reportStatus" value="ACTIVE" required class="hidden" checked>
+                  <i data-lucide="zap" class="w-4 h-4"></i> PARTY ACTIVE
+                </label>
+                <label class="flex items-center justify-center gap-2 p-2.5 rounded-lg border border-brand-border bg-slate-900 cursor-pointer hover:bg-slate-800 transition-all text-xs font-bold font-mono text-rose-400 has-[:checked]:border-brand-red has-[:checked]:bg-rose-950/40">
+                  <input type="radio" name="reportStatus" value="QUIET" class="hidden">
+                  <i data-lucide="moon" class="w-4 h-4"></i> QUIET / NO PARTY
+                </label>
+              </div>
+            </div>
+
+            <!-- Crowd Estimate -->
+            <div>
+              <label class="block text-xs font-mono text-slate-400 mb-1">CROWD SIZE ESTIMATE</label>
+              <select id="reportCrowd" class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-green">
+                <option value="Chill (10-30)">Chill (10-30 people)</option>
+                <option value="Moderate (30-70)">Moderate (30-70 people)</option>
+                <option value="Packed (70-150)" selected>Packed (70-150 people)</option>
+                <option value="Jammed (150+)">Jammed / Very Crowded (150+)</option>
+                <option value="Empty (0-10)">Empty / Quiet (0-10 people)</option>
+              </select>
+            </div>
+
+            <!-- Note -->
+            <div>
+              <label class="block text-xs font-mono text-slate-400 mb-1">NOTE / DETAILS (OPTIONAL)</label>
+              <input type="text" id="reportNote" maxlength="80" placeholder="e.g. DJ set starting, line moving fast..." class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-green">
+            </div>
+
+            <button type="submit" class="w-full py-2.5 rounded-lg bg-brand-green hover:bg-emerald-400 text-black font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-brand-green/10 transition-all flex items-center justify-center gap-2">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              SUBMIT STATUS UPDATE
+            </button>
+          </form>
+        </div>
+
+        <!-- Recent Updates Feed -->
+        <div class="glass-card rounded-xl p-5 border border-brand-border space-y-3">
+          <div class="flex items-center justify-between border-b border-brand-border/60 pb-2">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-brand-green"></i>
+              Live Activity Stream
+            </h3>
+            <span class="w-2 h-2 rounded-full bg-brand-green animate-ping"></span>
+          </div>
+
+          <div id="activityFeed" class="space-y-2.5 max-h-72 overflow-y-auto pr-1 text-xs font-mono">
+            <!-- Feed Items Rendered Dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Propose New Venue Modal -->
+  <div id="venueModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-brand-green/40 space-y-4 relative">
+      <button onclick="closeNewVenueModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-2 border-b border-brand-border pb-3">
+        <i data-lucide="plus-circle" class="w-5 h-5 text-brand-green"></i>
+        <h3 class="font-mono font-bold text-white text-base">PROPOSE NEW VENUE</h3>
+      </div>
+
+      <p class="text-xs text-slate-400 font-mono">
+        Submit a new venue location to be tracked. New venue entries require Host Panel verification before appearing in the public list.
+      </p>
+
+      <form id="newVenueForm" onsubmit="handleProposeVenue(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">VENUE NAME *</label>
+          <input type="text" id="newVenueName" required placeholder="e.g. Elm Street Patio Bar" class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-green">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">AREA / NEIGHBORHOOD *</label>
+          <input type="text" id="newVenueArea" required placeholder="e.g. Downtown / Campus North" class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-green">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">INITIAL STATUS</label>
+          <select id="newVenueStatus" class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-green">
+            <option value="ACTIVE">ACTIVE PARTY</option>
+            <option value="QUIET">QUIET / NO PARTY</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">INITIAL NOTE (OPTIONAL)</label>
+          <input type="text" id="newVenueNote" placeholder="e.g. Outdoor stage, live band starting" class="w-full p-2.5 bg-slate-900 border border-brand-border rounded-lg text-xs text-white focus:outline-none focus:border-brand-green">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-brand-green hover:bg-emerald-400 text-black font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          SEND TO HOST FOR APPROVAL
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 px-4 py-3 rounded-lg bg-slate-900 border border-brand-green text-brand-green text-xs font-mono shadow-xl">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <span id="toastMsg">Action completed successfully.</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-brand-border py-4 text-center text-xs text-slate-500 font-mono">
+    <p>Party Finder Directory • Hosted via GitHub Pages Static CDN • Real-Time Status Engine</p>
+  </footer>
+
+  <!-- Main JavaScript Logic -->
+  <script>
+    const REQUIRED_QUIET_REPORTS = 3;
+
+    // Initial Default Venues Dataset
+    const defaultVenues = [
+      {
+        id: 'v1',
+        name: 'Slippery Rock Student Union',
+        area: 'Campus Quad',
+        status: 'ACTIVE',
+        headcount: 140,
+        crowdLevel: 'Jammed (150+)',
+        lastUpdated: new Date(Date.now() - 4 * 60000).toISOString(),
+        note: 'Live DJ set near front plaza.',
+        quietCount: 0,
+        upvotes: 28,
+        downvotes: 2
+      },
+      {
+        id: 'v2',
+        name: 'North Shore Tailgate Lot',
+        area: 'Downtown Riverfront',
+        status: 'ACTIVE',
+        headcount: 85,
+        crowdLevel: 'Packed (70-150)',
+        lastUpdated: new Date(Date.now() - 12 * 60000).toISOString(),
+        note: 'Bonfire burning, music playing.',
+        quietCount: 1, // Progress towards quiet
+        upvotes: 19,
+        downvotes: 1
+      },
+      {
+        id: 'v3',
+        name: 'The Quad Green Space',
+        area: 'Central Campus',
+        status: 'QUIET',
+        headcount: 5,
+        crowdLevel: 'Empty (0-10)',
+        lastUpdated: new Date(Date.now() - 25 * 60000).toISOString(),
+        note: 'All quiet, crowd moved on.',
+        quietCount: 3,
+        upvotes: 12,
+        downvotes: 0
+      },
+      {
+        id: 'v4',
+        name: 'Downtown Main St Venue',
+        area: 'Main Street Corridor',
+        status: 'ACTIVE',
+        headcount: 110,
+        crowdLevel: 'Packed (70-150)',
+        lastUpdated: new Date(Date.now() - 2 * 60000).toISOString(),
+        note: 'Line moving quickly at entrance.',
+        quietCount: 0,
+        upvotes: 34,
+        downvotes: 3
+      }
+    ];
+
+    // Local Storage Persistence
+    let venues = JSON.parse(localStorage.getItem('pf_venues')) || defaultVenues;
+    let pendingVenues = JSON.parse(localStorage.getItem('pf_pending_venues')) || [];
+    let activityLog = JSON.parse(localStorage.getItem('pf_activity_log')) || [
+      { id: 'l1', venueName: 'Downtown Main St Venue', status: 'ACTIVE', time: '2m ago', note: 'Line moving quickly' },
+      { id: 'l2', venueName: 'Slippery Rock Student Union', status: 'ACTIVE', time: '4m ago', note: 'DJ set started' },
+      { id: 'l3', venueName: 'The Quad Green Space', status: 'QUIET', time: '25m ago', note: '3/3 Quiet reports verified' }
+    ];
+
+    let currentFilter = 'ALL';
+
+    // Helper: Session Storage for Voting Limits
+    function getUserVotes() {
+      try {
+        return JSON.parse(sessionStorage.getItem('pf_user_votes')) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function setUserVote(venueId, voteType) {
+      const votes = getUserVotes();
+      votes[venueId] = voteType; // 'UP' or 'DOWN'
+      try {
+        sessionStorage.setItem('pf_user_votes', JSON.stringify(votes));
+      } catch (e) {}
+    }
+
+    function saveData() {
+      localStorage.setItem('pf_venues', JSON.stringify(venues));
+      localStorage.setItem('pf_pending_venues', JSON.stringify(pendingVenues));
+      localStorage.setItem('pf_activity_log', JSON.stringify(activityLog));
+    }
+
+    // Application Initialization
+    document.addEventListener('DOMContentLoaded', () => {
+      populateVenueSelect();
+      renderVenues();
+      renderActivityFeed();
+      renderPendingQueue();
+      updateHeaderStats();
+      lucide.createIcons();
+    });
+
+    // Render Venue Cards
+    function renderVenues() {
+      const grid = document.getElementById('venueGrid');
+      const searchVal = document.getElementById('searchInput').value.toLowerCase();
+      const sortVal = document.getElementById('sortSelect').value;
+      const emptyState = document.getElementById('emptyState');
+      const userVotes = getUserVotes();
+
+      let filtered = venues.filter(v => {
+        const matchesFilter = (currentFilter === 'ALL') || (v.status === currentFilter);
+        const matchesSearch = v.name.toLowerCase().includes(searchVal) || v.area.toLowerCase().includes(searchVal);
+        return matchesFilter && matchesSearch;
+      });
+
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.lastUpdated);
+        const dateB = new Date(b.lastUpdated);
+        if (sortVal === 'recent') return dateB - dateA;
+        if (sortVal === 'headcount') return b.headcount - a.headcount;
+        if (sortVal === 'votes') return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+        if (sortVal === 'name') return a.name.localeCompare(b.name);
+      });
+
+      document.getElementById('showingCount').innerText = `Showing ${filtered.length} locations`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      grid.innerHTML = filtered.map(v => {
+        let badgeStyle = '';
+        let statusLabel = '';
+        let borderClass = '';
+
+        if (v.status === 'ACTIVE') {
+          badgeStyle = 'bg-emerald-950/80 text-brand-green border-brand-green/40 shadow-sm shadow-brand-green/20';
+          statusLabel = 'PARTY ACTIVE';
+          borderClass = 'border-status-active';
+        } else if (v.status === 'QUIET') {
+          badgeStyle = 'bg-rose-950/80 text-brand-red border-brand-red/40';
+          statusLabel = 'QUIET / NO PARTY';
+          borderClass = 'border-status-quiet';
+        }
+
+        const relativeTime = getRelativeTimeString(new Date(v.lastUpdated));
+        const userVote = userVotes[v.id]; // 'UP', 'DOWN', or undefined
+
+        // Quiet transition progress calculation
+        const isUnderQuietReview = v.status === 'ACTIVE' && (v.quietCount || 0) > 0;
+        const quietProgressPct = Math.min(100, Math.round(((v.quietCount || 0) / REQUIRED_QUIET_REPORTS) * 100));
+
+        return `
+          <div class="glass-card rounded-xl p-4 transition-all hover:-translate-y-0.5 ${borderClass} flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <h4 class="font-bold text-white text-base leading-snug">${escapeHtml(v.name)}</h4>
+                  <p class="text-xs text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-slate-500"></i> ${escapeHtml(v.area)}
+                  </p>
+                </div>
+                <span class="text-[10px] font-mono font-bold px-2 py-1 rounded border ${badgeStyle} shrink-0">
+                  ${statusLabel}
+                </span>
+              </div>
+
+              <!-- Quiet Threshold Review Progress Bar (If Active but received Quiet reports) -->
+              ${isUnderQuietReview ? `
+                <div class="bg-slate-900/90 rounded-lg p-2 border border-rose-500/30 space-y-1 my-2 font-mono">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-rose-400 font-bold flex items-center gap-1">
+                      <i data-lucide="alert-circle" class="w-3 h-3"></i> Quiet Review
+                    </span>
+                    <span class="text-slate-300 font-bold">${v.quietCount}/${REQUIRED_QUIET_REPORTS} reports</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-rose-500 h-full transition-all duration-300" style="width: ${quietProgressPct}%"></div>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Requires ${REQUIRED_QUIET_REPORTS - v.quietCount} more quiet report(s) to flip status.</p>
+                </div>
+              ` : ''}
+
+              <div class="bg-slate-900/80 rounded-lg p-2.5 border border-brand-border space-y-1.5 my-2 text-xs font-mono">
+                <div class="flex items-center justify-between text-slate-300">
+                  <span class="text-slate-500">Crowd Size:</span>
+                  <span class="font-bold text-white">${v.crowdLevel}</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-300">
+                  <span class="text-slate-500">Last Report:</span>
+                  <span class="text-brand-green">${relativeTime}</span>
+                </div>
+                ${v.note ? `
+                  <div class="pt-1 border-t border-slate-800 text-slate-400 italic text-[11px] truncate">
+                    "${escapeHtml(v.note)}"
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 text-xs font-mono">
+              <div class="flex items-center gap-1 text-slate-400">
+                <span class="text-slate-500 text-[10px]">RELIABILITY:</span>
+                <span class="font-bold ${v.upvotes - v.downvotes >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${v.upvotes - v.downvotes > 0 ? '+' : ''}${v.upvotes - v.downvotes}
+                </span>
+              </div>
+
+              <!-- Voting Controls with Single Net Vote Limitation -->
+              <div class="flex items-center gap-1">
+                <button 
+                  onclick="voteVenue('${v.id}', 'UP')" 
+                  class="px-2 py-1 rounded text-xs transition-all flex items-center gap-1 border ${
+                    userVote === 'UP' 
+                      ? 'bg-brand-green text-black border-brand-green font-bold' 
+                      : 'bg-slate-800 hover:bg-emerald-950 hover:text-brand-green border-brand-border text-slate-300'
+                  }"
+                  title="${userVote === 'UP' ? 'Click to undo vote' : 'Upvote reliability'}"
+                >
+                  <i data-lucide="thumbs-up" class="w-3 h-3"></i> ${v.upvotes}
+                </button>
+
+                <button 
+                  onclick="voteVenue('${v.id}', 'DOWN')" 
+                  class="px-2 py-1 rounded text-xs transition-all flex items-center gap-1 border ${
+                    userVote === 'DOWN' 
+                      ? 'bg-brand-red text-white border-brand-red font-bold' 
+                      : 'bg-slate-800 hover:bg-rose-950 hover:text-brand-red border-brand-border text-slate-300'
+                  }"
+                  title="${userVote === 'DOWN' ? 'Click to undo vote' : 'Downvote reliability'}"
+                >
+                  <i data-lucide="thumbs-down" class="w-3 h-3"></i> ${v.downvotes}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // Populate Select Options for Status Form
+    function populateVenueSelect() {
+      const select = document.getElementById('reportVenueSelect');
+      select.innerHTML = venues.map(v => `<option value="${v.id}">${v.name} (${v.area})</option>`).join('');
+    }
+
+    // Single Vote Limit Per Session Logic
+    function voteVenue(id, type) {
+      const v = venues.find(item => item.id === id);
+      if (!v) return;
+
+      const userVotes = getUserVotes();
+      const currentVote = userVotes[id];
+
+      if (currentVote === type) {
+        // Undo vote if clicking same button again
+        if (type === 'UP') v.upvotes = Math.max(0, v.upvotes - 1);
+        if (type === 'DOWN') v.downvotes = Math.max(0, v.downvotes - 1);
+        delete userVotes[id];
+        try {
+          sessionStorage.setItem('pf_user_votes', JSON.stringify(userVotes));
+        } catch (e) {}
+        showToast('Vote removed.');
+      } else {
+        // If switching vote from opposite
+        if (currentVote === 'UP') v.upvotes = Math.max(0, v.upvotes - 1);
+        if (currentVote === 'DOWN') v.downvotes = Math.max(0, v.downvotes - 1);
+
+        if (type === 'UP') v.upvotes++;
+        if (type === 'DOWN') v.downvotes++;
+
+        setUserVote(id, type);
+        showToast(type === 'UP' ? 'Upvoted location!' : 'Downvoted location!');
+      }
+
+      saveData();
+      renderVenues();
+    }
+
+    // Instant Automatic Status Submission with Multi-Report Threshold for 'QUIET'
+    function handleStatusSubmit(e) {
+      e.preventDefault();
+      const venueId = document.getElementById('reportVenueSelect').value;
+      const statusRadios = document.getElementsByName('reportStatus');
+      let selectedStatus = 'ACTIVE';
+      for (const r of statusRadios) {
+        if (r.checked) selectedStatus = r.value;
+      }
+      const crowd = document.getElementById('reportCrowd').value;
+      const note = document.getElementById('reportNote').value.trim();
+
+      const venue = venues.find(v => v.id === venueId);
+      if (venue) {
+        venue.lastUpdated = new Date().toISOString();
+        if (note) venue.note = note;
+
+        if (selectedStatus === 'ACTIVE') {
+          // Reset quiet count counter if active report comes in
+          venue.status = 'ACTIVE';
+          venue.quietCount = 0;
+          venue.crowdLevel = crowd;
+
+          if (crowd.includes('Jammed')) venue.headcount = 160;
+          else if (crowd.includes('Packed')) venue.headcount = 100;
+          else if (crowd.includes('Moderate')) venue.headcount = 50;
+          else if (crowd.includes('Chill')) venue.headcount = 20;
+          else venue.headcount = 10;
+
+          activityLog.unshift({
+            id: 'l' + Date.now(),
+            venueName: venue.name,
+            status: 'ACTIVE',
+            time: 'Just now',
+            note: note || `Reported Active (${crowd})`
+          });
+
+          showToast('Status automatically updated to ACTIVE!');
+
+        } else if (selectedStatus === 'QUIET') {
+          // Process multi-report threshold requirement for quiet flip
+          if (venue.status === 'QUIET') {
+            // Already quiet, just update crowd level/note
+            venue.crowdLevel = crowd;
+            venue.headcount = 5;
+
+            activityLog.unshift({
+              id: 'l' + Date.now(),
+              venueName: venue.name,
+              status: 'QUIET',
+              time: 'Just now',
+              note: note || 'Confirmed Quiet'
+            });
+
+            showToast('Quiet status updated!');
+          } else {
+            // Venue currently ACTIVE -> Increment quiet threshold counter
+            venue.quietCount = (venue.quietCount || 0) + 1;
+
+            if (venue.quietCount >= REQUIRED_QUIET_REPORTS) {
+              // Threshold reached! Flip to QUIET
+              venue.status = 'QUIET';
+              venue.crowdLevel = 'Empty (0-10)';
+              venue.headcount = 5;
+
+              activityLog.unshift({
+                id: 'l' + Date.now(),
+                venueName: venue.name,
+                status: 'QUIET',
+                time: 'Just now',
+                note: `Flipped to QUIET after ${REQUIRED_QUIET_REPORTS}/${REQUIRED_QUIET_REPORTS} reports`
+              });
+
+              showToast(`Threshold reached! ${venue.name} is now marked QUIET.`);
+            } else {
+              activityLog.unshift({
+                id: 'l' + Date.now(),
+                venueName: venue.name,
+                status: 'ACTIVE',
+                time: 'Just now',
+                note: `Quiet report recorded (${venue.quietCount}/${REQUIRED_QUIET_REPORTS} needed)`
+              });
+
+              showToast(`Quiet report logged! (${venue.quietCount}/${REQUIRED_QUIET_REPORTS} needed to flip status)`);
+            }
+          }
+        }
+
+        saveData();
+        renderActivityFeed();
+        renderVenues();
+        updateHeaderStats();
+
+        document.getElementById('reportNote').value = '';
+      }
+    }
+
+    // Open/Close New Venue Modal
+    function openNewVenueModal() {
+      document.getElementById('venueModal').classList.remove('hidden');
+    }
+
+    function closeNewVenueModal() {
+      document.getElementById('venueModal').classList.add('hidden');
+    }
+
+    // Host Approval Flow: Propose New Venue
+    function handleProposeVenue(e) {
+      e.preventDefault();
+      const name = document.getElementById('newVenueName').value.trim();
+      const area = document.getElementById('newVenueArea').value.trim();
+      const status = document.getElementById('newVenueStatus').value;
+      const note = document.getElementById('newVenueNote').value.trim();
+
+      const newEntry = {
+        id: 'p_' + Date.now(),
+        name,
+        area,
+        status,
+        note,
+        submittedAt: new Date().toISOString()
+      };
+
+      pendingVenues.push(newEntry);
+      saveData();
+
+      renderPendingQueue();
+      closeNewVenueModal();
+      showToast('Venue proposed! Sent to Host Panel for review.');
+
+      document.getElementById('newVenueForm').reset();
+    }
+
+    // Host Action: Approve Proposed New Venue
+    function approvePendingVenue(id) {
+      const idx = pendingVenues.findIndex(p => p.id === id);
+      if (idx !== -1) {
+        const item = pendingVenues[idx];
+        const newVenue = {
+          id: 'v_' + Date.now(),
+          name: item.name,
+          area: item.area,
+          status: item.status,
+          headcount: item.status === 'ACTIVE' ? 80 : 5,
+          crowdLevel: item.status === 'ACTIVE' ? 'Packed (70-150)' : 'Empty (0-10)',
+          lastUpdated: new Date().toISOString(),
+          note: item.note || 'Newly approved venue.',
+          quietCount: 0,
+          upvotes: 1,
+          downvotes: 0
+        };
+
+        venues.unshift(newVenue);
+        pendingVenues.splice(idx, 1);
+        saveData();
+
+        populateVenueSelect();
+        renderVenues();
+        renderPendingQueue();
+        updateHeaderStats();
+        showToast(`Approved "${item.name}"! Now live on directory.`);
+      }
+    }
+
+    // Host Action: Reject Proposed Venue
+    function rejectPendingVenue(id) {
+      const idx = pendingVenues.findIndex(p => p.id === id);
+      if (idx !== -1) {
+        pendingVenues.splice(idx, 1);
+        saveData();
+        renderPendingQueue();
+        showToast('Venue proposal rejected.');
+      }
+    }
+
+    // Render Host Pending Queue
+    function renderPendingQueue() {
+      const container = document.getElementById('pendingList');
+      document.getElementById('pendingQueueCount').innerText = `${pendingVenues.length} venue requests waiting`;
+
+      const badge = document.getElementById('pendingBadge');
+      if (pendingVenues.length > 0) {
+        badge.innerText = pendingVenues.length;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      if (pendingVenues.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 font-mono italic">No pending new venue requests requiring host approval.</p>`;
+        return;
+      }
+
+      container.innerHTML = pendingVenues.map(p => `
+        <div class="p-3 bg-slate-900 border border-brand-border rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs font-mono">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white">${escapeHtml(p.name)}</span>
+              <span class="text-slate-400">(${escapeHtml(p.area)})</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${p.status === 'ACTIVE' ? 'bg-emerald-950 text-brand-green border border-brand-green/30' : 'bg-rose-950 text-brand-red border border-brand-red/30'}">
+                ${p.status}
+              </span>
+            </div>
+            ${p.note ? `<p class="text-slate-400">Note: "${escapeHtml(p.note)}"</p>` : ''}
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="approvePendingVenue('${p.id}')" class="px-3 py-1.5 rounded bg-brand-green text-black font-bold hover:bg-emerald-400 transition-all flex items-center gap-1">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i> APPROVE
+            </button>
+            <button onclick="rejectPendingVenue('${p.id}')" class="px-3 py-1.5 rounded bg-slate-800 text-rose-400 hover:bg-rose-950 border border-brand-border transition-all flex items-center gap-1">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i> REJECT
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    // Toggle Host Admin Panel Visibility
+    function toggleAdminPanel() {
+      const panel = document.getElementById('adminPanel');
+      panel.classList.toggle('hidden');
+    }
+
+    // Filter Handler
+    function setFilter(filter) {
+      currentFilter = filter;
+      ['ALL', 'ACTIVE', 'QUIET'].forEach(f => {
+        const btn = document.getElementById(`filterBtn${f}`);
+        if (f === filter) {
+          btn.className = "flex-1 py-1.5 text-xs font-mono font-medium rounded-md text-white bg-slate-800 transition-all shadow";
+        } else {
+          btn.className = "flex-1 py-1.5 text-xs font-mono font-medium rounded-md text-slate-400 hover:text-white transition-all";
+        }
+      });
+      renderVenues();
+    }
+
+    // Render Activity Feed
+    function renderActivityFeed() {
+      const feed = document.getElementById('activityFeed');
+      feed.innerHTML = activityLog.slice(0, 6).map(item => `
+        <div class="p-2 rounded bg-slate-900/60 border border-slate-800 flex items-start justify-between gap-2">
+          <div class="space-y-0.5">
+            <div class="font-bold text-slate-200 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full ${item.status === 'ACTIVE' ? 'bg-brand-green' : 'bg-brand-red'}"></span>
+              ${escapeHtml(item.venueName)}
+            </div>
+            ${item.note ? `<p class="text-[11px] text-slate-400 italic font-mono max-w-[200px] truncate">${escapeHtml(item.note)}</p>` : ''}
+          </div>
+          <span class="text-[10px] text-slate-500 shrink-0 font-mono">${item.time}</span>
+        </div>
+      `).join('');
+    }
+
+    // Header Stats
+    function updateHeaderStats() {
+      const active = venues.filter(v => v.status === 'ACTIVE').length;
+      const quiet = venues.filter(v => v.status === 'QUIET').length;
+      
+      document.getElementById('activeCount').innerText = active;
+      document.getElementById('quietCount').innerText = quiet;
+      
+      document.getElementById('countAll').innerText = venues.length;
+      document.getElementById('countActive').innerText = active;
+      document.getElementById('countQuiet').innerText = quiet;
+    }
+
+    // Manual Refresh
+    function manualRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      icon.classList.add('animate-spin');
+      setTimeout(() => {
+        icon.classList.remove('animate-spin');
+        renderVenues();
+        showToast('Refreshed venue data');
+      }, 600);
+    }
+
+    function scrollToReportSection() {
+      document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    function getRelativeTimeString(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      if (isNaN(seconds) || seconds < 60) return 'Just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h ago`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
