@@ -1,9 +1,57 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+  
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Party Finder - Live Venue Status Tracker</title>
+
+  <!-- Include Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+  apiKey: "FIREBASE_API_KEY_PLACEHOLDER",
+  authDomain: "FIREBASE_AUTH_DOMAIN_PLACEHOLDER",
+  databaseURL: "FIREBASE_DATABASE_URL_PLACEHOLDER",
+  projectId: "FIREBASE_PROJECT_ID_PLACEHOLDER",
+  storageBucket: "FIREBASE_STORAGE_BUCKET_PLACEHOLDER",
+  messagingSenderId: "838886123585", // Non-sensitive sender ID
+  appId: "FIREBASE_APP_ID_PLACEHOLDER"
+};
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Real-time listener: triggers whenever any phone submits a vote/update
+  db.ref('venues').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      // Automatically refresh the UI on all connected phones
+      renderVenues(data);
+    }
+  });
+
+  // Submit a status report to the central database
+  function submitStatusReport(venueId, statusType) {
+    const venueRef = db.ref('venues/' + venueId);
+    venueRef.transaction((venue) => {
+      if (venue) {
+        if (statusType === 'party') {
+          venue.status = 'ACTIVE PARTY';
+          venue.quietCount = 0;
+        } else if (statusType === 'quiet') {
+          venue.quietCount = (venue.quietCount || 0) + 1;
+          if (venue.quietCount >= 3) {
+            venue.status = 'QUIET';
+          }
+        }
+      }
+      return venue;
+    });
+  }
+</script>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
