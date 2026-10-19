@@ -494,19 +494,31 @@
     }
 
     // Fundraiser Management
-    function updateDonateProgressBar(raised) {
-      const goal = 99;
-      const percentage = Math.min(Math.round((raised / goal) * 100), 100);
-      document.getElementById('donateProgressText').textContent = `$${raised} / $${goal}`;
-      document.getElementById('donateProgressBar').style.width = `${percentage}%`;
-      document.getElementById('adminFundraiserInput').value = raised;
-    }
+    // Fundraiser Management - Sets exact total and updates UI bar
+function updateDonateProgressBar(raised) {
+  const goal = 99;
+  const currentTotal = Math.max(0, parseInt(raised) || 0); // Ensures non-negative values
+  const percentage = Math.min(Math.round((currentTotal / goal) * 100), 100);
 
-    function updateFundraiserAmount() {
-      const amount = parseInt(document.getElementById('adminFundraiserInput').value) || 0;
-      db.ref('fundraiser/raised').set(amount);
-      alert('Fundraiser raised total updated successfully!');
+  document.getElementById('donateProgressText').textContent = `$${currentTotal} / $${goal}`;
+  document.getElementById('donateProgressBar').style.width = `${percentage}%`;
+  document.getElementById('adminFundraiserInput').value = currentTotal;
+}
+
+function updateFundraiserAmount() {
+  const inputVal = document.getElementById('adminFundraiserInput').value;
+  // Parse input as absolute total raised
+  const newTotal = Math.max(0, parseInt(inputVal) || 0);
+
+  // Write exact total directly to Firebase
+  db.ref('fundraiser/raised').set(newTotal, (error) => {
+    if (error) {
+      alert('Error updating fundraiser total: ' + error.message);
+    } else {
+      alert(`Fundraiser total updated to $${newTotal}!`);
     }
+  });
+}
 
     // Combined Feedback Modal Handlers
     function setFeedbackType(type) {
