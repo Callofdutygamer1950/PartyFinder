@@ -52,6 +52,32 @@
     });
   }
 </script>
+
+<!-- Include Firebase Auth SDK in index.html -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+  const auth = firebase.auth();
+
+  async function openHostPanel() {
+    // If already logged in, show the host panel
+    if (auth.currentUser) {
+      document.getElementById('hostModal').classList.remove('hidden');
+      return;
+    }
+
+    const email = prompt("Enter Admin Email:");
+    const password = prompt("Enter Admin Password:");
+    if (!email || !password) return;
+
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      document.getElementById('hostModal').classList.remove('hidden');
+    } catch (error) {
+      alert("Access Denied: " + error.message);
+    }
+  }
+</script>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
