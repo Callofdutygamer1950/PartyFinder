@@ -6,12 +6,18 @@
   <title>Campus Party Monitor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Leaflet CSS & JS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Heatmap Plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col justify-between">
 
   <!-- Header / Navigation -->
   <header class="border-b border-gray-800 bg-gray-900/60 backdrop-blur-md sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
         <div class="bg-purple-600/20 p-2 rounded-xl border border-purple-500/30 text-purple-400">
           <i data-lucide="radio" class="w-6 h-6 animate-pulse"></i>
@@ -23,13 +29,39 @@
           <p class="text-xs text-gray-400">Real-Time Anonymous Party Tracker</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <button onclick="openProposeModal()" class="px-3.5 py-2 text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-lg flex items-center gap-2 transition">
-          <i data-lucide="plus-circle" class="w-4 h-4 text-purple-400"></i>
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- View Toggle Buttons -->
+        <div class="bg-gray-800/80 p-1 rounded-lg border border-gray-700 flex gap-1 mr-2">
+          <button onclick="switchView('grid')" id="viewGridBtn" class="px-2.5 py-1 text-xs rounded-md font-semibold bg-purple-600 text-white transition flex items-center gap-1">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Grid
+          </button>
+          <button onclick="switchView('map')" id="viewMapBtn" class="px-2.5 py-1 text-xs rounded-md font-semibold text-gray-400 hover:text-white transition flex items-center gap-1">
+            <i data-lucide="map" class="w-3.5 h-3.5"></i> Map
+          </button>
+        </div>
+
+        <button onclick="openBugModal()" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="bug" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Report</span> Bug
+        </button>
+        
+        <button onclick="openFeatureModal()" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="lightbulb" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Request</span> Feature
+        </button>
+
+        <button onclick="openDonateModal()" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-lg flex items-center gap-1.5 transition shadow-sm">
+          <i data-lucide="heart" class="w-3.5 h-3.5 text-pink-400 fill-pink-400/20"></i>
+          <span class="hidden sm:inline">Support</span> iOS App
+        </button>
+
+        <button onclick="openProposeModal()" class="px-3 py-2 text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-purple-400"></i>
           Propose Party
         </button>
-        <button onclick="openHostPanel()" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-lg shadow-purple-900/20 flex items-center gap-2 transition">
-          <i data-lucide="shield" class="w-4 h-4"></i>
+
+        <button onclick="openHostPanel()" class="px-3 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
+          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
           Host Panel
         </button>
       </div>
@@ -52,9 +84,22 @@
       </div>
     </div>
 
-    <!-- Party Directory Grid -->
+    <!-- View Container: Grid View -->
     <div id="partiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
       <!-- Cards rendered dynamically via JavaScript -->
+    </div>
+
+    <!-- View Container: Interactive Map View (Hidden by Default) -->
+    <div id="mapViewContainer" class="hidden mb-12">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-2xl relative">
+        <div id="campusMap" class="w-full h-[500px] z-10"></div>
+        <div class="absolute bottom-4 left-4 z-20 bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-xl p-3 text-xs text-gray-300 space-y-1">
+          <p class="font-bold text-white mb-1">Map Legend</p>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Active Party</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500 inline-block"></span> Quiet Location</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Dynamic Heatmap Density</div>
+        </div>
+      </div>
     </div>
 
     <!-- Anonymous Status Report Form -->
@@ -64,7 +109,6 @@
         <h2 class="text-lg font-bold text-white">Submit Anonymous Status Update</h2>
       </div>
 
-      <!-- Anonymous Disclaimer Box -->
       <div class="bg-purple-950/40 border border-purple-500/20 rounded-xl p-3.5 mb-6 flex items-start gap-3">
         <i data-lucide="shield-check" class="w-5 h-5 text-purple-400 shrink-0 mt-0.5"></i>
         <p class="text-xs text-purple-200/90 leading-relaxed">
@@ -99,11 +143,6 @@
           <input type="number" id="reportHeadcount" placeholder="e.g. 150" min="0" max="2000" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-purple-500">
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Live Comment / Note (Optional)</label>
-          <textarea id="reportComment" rows="2" maxlength="200" placeholder="e.g. Line is crazy long, DJ playing rap..." class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-purple-500"></textarea>
-        </div>
-
         <button type="submit" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl text-sm transition shadow-lg shadow-purple-900/30">
           Post Live Report
         </button>
@@ -116,19 +155,133 @@
     Campus Party Monitor &copy; 2026. Real-time updates synced via Cloud Engine.
   </footer>
 
-  <!-- Propose Party Modal (Public) -->
+  <!-- Party Details Modal (Comments & Push Alerts) -->
+  <div id="partyDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-start border-b border-gray-800 pb-4 mb-4">
+        <div>
+          <h2 id="modalPartyTitle" class="text-lg font-bold text-white">Party Name</h2>
+          <p id="modalPartyLocation" class="text-xs text-gray-400">Location</p>
+        </div>
+        <button onclick="closePartyDetailsModal()" class="text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
+      </div>
+
+      <div class="flex-grow overflow-y-auto space-y-4 pr-1">
+        <!-- Push Alert Subscription Box -->
+        <div class="bg-purple-950/30 border border-purple-500/30 rounded-xl p-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="bell" class="w-5 h-5 text-purple-400"></i>
+            <div>
+              <p class="text-xs font-bold text-white">Live Push Notifications</p>
+              <p class="text-[11px] text-purple-300/80">Get alerts when this party activates</p>
+            </div>
+          </div>
+          <button id="subscribePushBtn" onclick="togglePushSubscription()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold transition">
+            Subscribe
+          </button>
+        </div>
+
+        <!-- Latest Active Comment -->
+        <div>
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Live Comments</h3>
+          <div id="modalCommentContainer" class="bg-gray-800/50 border border-gray-700/60 rounded-xl p-3 text-xs text-gray-300 min-h-[60px] flex items-center justify-center">
+            <p class="text-gray-500 italic">No active comments posted yet.</p>
+          </div>
+        </div>
+
+        <!-- Add Comment Form -->
+        <form onsubmit="handleModalCommentSubmit(event)" class="space-y-2 pt-2">
+          <label class="block text-xs font-semibold text-gray-400">Post Comment (Auto-deletes in 12h)</label>
+          <div class="flex gap-2">
+            <input type="text" id="modalCommentInput" maxlength="180" placeholder="Type a comment..." required class="flex-grow bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+            <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition">Post</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bug Report Modal -->
+  <div id="bugModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-red-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="bg-red-500/20 p-2 rounded-xl text-red-400"><i data-lucide="bug" class="w-5 h-5"></i></div>
+        <h2 class="text-lg font-bold text-white">Report a Bug</h2>
+      </div>
+      <p class="text-xs text-gray-400 mb-4">Let us know what broke or isn't displaying correctly on your device.</p>
+      <form onsubmit="handleBugSubmit(event)" class="space-y-4">
+        <textarea id="bugText" rows="3" required placeholder="Describe what went wrong..." class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-red-500"></textarea>
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="closeBugModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
+          <button type="submit" class="px-4 py-2 text-xs bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg">Submit Bug Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Feature Request Modal -->
+  <div id="featureModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-amber-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="bg-amber-500/20 p-2 rounded-xl text-amber-400"><i data-lucide="lightbulb" class="w-5 h-5"></i></div>
+        <h2 class="text-lg font-bold text-white">Request a Feature</h2>
+      </div>
+      <p class="text-xs text-gray-400 mb-4">Have an idea to improve the app? Share your feature request below!</p>
+      <form onsubmit="handleFeatureSubmit(event)" class="space-y-4">
+        <textarea id="featureText" rows="3" required placeholder="Explain your idea..." class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-amber-500"></textarea>
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="closeFeatureModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
+          <button type="submit" class="px-4 py-2 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Donation Modal -->
+  <div id="donateModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-pink-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="bg-pink-500/20 p-2 rounded-xl text-pink-400"><i data-lucide="smartphone" class="w-6 h-6"></i></div>
+        <div>
+          <h2 class="text-lg font-bold text-white">Help Us Bring Party Finder to iOS!</h2>
+          <p class="text-xs text-pink-400/90 font-medium">Native App Fundraiser</p>
+        </div>
+      </div>
+      <div class="bg-gray-800/80 border border-gray-700 rounded-xl p-4 mb-5 space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-gray-300 font-medium">Goal Progress:</span>
+          <span id="donateProgressText" class="font-bold text-emerald-400">$0 / $99</span>
+        </div>
+        <div class="w-full bg-gray-900 rounded-full h-3 overflow-hidden border border-gray-700">
+          <div id="donateProgressBar" class="bg-gradient-to-r from-pink-500 to-emerald-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+      <button onclick="closeDonateModal()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-xs font-medium">Close</button>
+    </div>
+  </div>
+
+  <!-- Propose Party Modal with Map Pinning Option -->
   <div id="proposeModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
       <h2 class="text-lg font-bold text-white mb-2">Propose New Campus Party</h2>
-      <p class="text-xs text-gray-400 mb-4">New parties require host approval before appearing on the public directory.</p>
       <form onsubmit="handleProposeParty(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Party Name</label>
           <input type="text" id="proposeName" required placeholder="e.g. Pine Hall Basement Party" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Location / Address Description (Optional)</label>
-          <input type="text" id="proposeLocation" placeholder="e.g. 200 Campus Drive (or leave blank)" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Location Description</label>
+          <input type="text" id="proposeLocation" placeholder="e.g. 200 Campus Drive" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">Latitude (Optional)</label>
+            <input type="number" step="any" id="proposeLat" placeholder="41.063" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">Longitude (Optional)</label>
+            <input type="number" step="any" id="proposeLng" placeholder="-80.052" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs text-white">
+          </div>
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button type="button" onclick="closeProposeModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
@@ -138,45 +291,20 @@
     </div>
   </div>
 
-  <!-- Admin Login Modal -->
-  <div id="adminLoginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-      <h2 class="text-lg font-bold text-white mb-1">Host Admin Login</h2>
-      <p class="text-xs text-gray-400 mb-4">Authenticate with host credentials to manage pending parties.</p>
-      <form onsubmit="handleAdminLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Admin Email</label>
-          <input type="email" id="adminEmail" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Password</label>
-          <input type="password" id="adminPassword" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
-        </div>
-        <p id="loginError" class="text-red-400 text-xs hidden"></p>
-        <div class="flex justify-end gap-3 pt-2">
-          <button type="button" onclick="closeAdminLoginModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
-          <button type="submit" class="px-4 py-2 text-xs bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-lg">Login</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Host Panel Modal (Admin Only) -->
+  <!-- Host Panel Modal -->
   <div id="hostModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
-        <div class="flex items-center gap-2">
-          <i data-lucide="shield-check" class="w-5 h-5 text-purple-400"></i>
-          <h2 class="text-lg font-bold text-white">Host Review Queue</h2>
+        <h2 class="text-lg font-bold text-white">Host Admin Panel</h2>
+        <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium">Log Out</button>
+      </div>
+      <div class="flex-grow overflow-y-auto space-y-6">
+        <div>
+          <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">Pending Party Approvals</h3>
+          <div id="pendingPartiesList" class="space-y-2"></div>
         </div>
-        <button onclick="handleAdminLogout()" class="text-xs text-red-400 hover:text-red-300 font-medium">Log Out</button>
       </div>
-      <div id="pendingPartiesList" class="flex-grow overflow-y-auto space-y-3 pr-2">
-        <!-- Pending parties populated dynamically -->
-      </div>
-      <div class="flex justify-end pt-4 border-t border-gray-800 mt-4">
-        <button onclick="closeHostModal()" class="px-4 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg">Close</button>
-      </div>
+      <button onclick="closeHostModal()" class="px-4 py-2 text-xs bg-gray-800 text-gray-300 rounded-lg mt-4 align-self-end">Close</button>
     </div>
   </div>
 
@@ -187,7 +315,6 @@
 
   <!-- Application Logic -->
   <script>
-    // Firebase Configuration Placeholders (Injected automatically by GitHub Actions)
     const firebaseConfig = {
       apiKey: "FIREBASE_API_KEY_PLACEHOLDER",
       authDomain: "FIREBASE_AUTH_DOMAIN_PLACEHOLDER",
@@ -204,356 +331,253 @@
 
     let partiesData = {};
     let activeFilter = 'ALL';
+    let selectedPartyId = null;
+    let map = null;
+    let heatLayer = null;
+    let mapMarkers = [];
 
-    // Strictly targets slurs and hate speech (ignores standard profanity)
-    const SLUR_TERMS = [
-      /\bnigge?r[s]?\b/i,
-      /\bfag(got)?[s]?\b/i,
-      /\bretard[s]?\b/i,
-      /\bchink[s]?\b/i,
-      /\bspic[s]?\b/i,
-      /\bkike[s]?\b/i,
-      /\btranny\b/i,
-      /\bdyke[s]?\b/i,
-      /\bcunt[s]?\b/i
-    ];
+    // Default Slippery Rock University Campus Coordinates
+    const DEFAULT_LAT = 41.0638;
+    const DEFAULT_LNG = -80.0528;
 
-    function containsSlurs(text) {
-      if (!text) return false;
-      return SLUR_TERMS.some(pattern => pattern.test(text));
-    }
+    const SLUR_TERMS = [/\bnigge?r[s]?\b/i, /\bfag(got)?[s]?\b/i, /\bretard[s]?\b/i];
 
-    // Initialize Database Sync
+    function containsSlurs(text) { return text && SLUR_TERMS.some(pattern => pattern.test(text)); }
+
     db.ref('parties').on('value', (snapshot) => {
-      const data = snapshot.val();
-      partiesData = data || {};
+      partiesData = snapshot.val() || {};
       renderUI();
     });
 
     function renderUI() {
       renderPartiesGrid();
       populateDropdown();
+      if (map) updateMapLayers();
       lucide.createIcons();
     }
 
-    // Render Main Grid Cards
+    // Render Streamlined Cards (Click Opens Detail Modal)
     function renderPartiesGrid() {
       const grid = document.getElementById('partiesGrid');
-      const search = document.getElementById('searchInput').value.toLowerCase();
       grid.innerHTML = '';
 
       const partyList = Object.values(partiesData);
-
       if (partyList.length === 0) {
-        grid.innerHTML = `
-          <div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40">
-            <i data-lucide="sparkles" class="w-8 h-8 text-purple-400 mx-auto mb-3 opacity-60"></i>
-            <p class="text-sm text-gray-300 font-semibold mb-1">No Active Parties Listed</p>
-            <p class="text-xs text-gray-500">Propose a new party or check back once the host approves submissions.</p>
-          </div>
-        `;
+        grid.innerHTML = `<div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40"><p class="text-sm text-gray-300 font-semibold">No Active Parties Listed</p></div>`;
         return;
       }
 
       partyList.forEach(party => {
         if (activeFilter === 'PARTY' && party.status !== 'ACTIVE PARTY') return;
         if (activeFilter === 'QUIET' && party.status !== 'QUIET') return;
-        if (search && !party.name.toLowerCase().includes(search) && !(party.location && party.location.toLowerCase().includes(search))) return;
 
         const isParty = party.status === 'ACTIVE PARTY';
-        const sessionVote = sessionStorage.getItem(`vote_${party.id}`);
-
-        // Compute crowd average
         const totalReports = party.crowdReportCount || 0;
-        const rawAvg = totalReports > 0 ? Math.round((party.crowdTotalSum || 0) / totalReports) : 0;
-        const avgCrowd = Math.min(rawAvg, 2000);
-        
+        const avgCrowd = Math.min(totalReports > 0 ? Math.round((party.crowdTotalSum || 0) / totalReports) : 0, 2000);
+
         const card = document.createElement('div');
-        card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between transition hover:border-purple-500/50`;
-        
+        card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 cursor-pointer transition`;
+        card.onclick = () => openPartyDetailsModal(party.id);
+
         card.innerHTML = `
           <div>
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
-                ${party.location ? `<p class="text-xs text-gray-400">${escapeHtml(party.location)}</p>` : ''}
-              </div>
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400 border border-gray-700'}">
-                ${party.status}
-              </span>
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${party.status}</span>
             </div>
-
-            ${isParty && party.quietCount > 0 ? `
-              <div class="mb-3 bg-gray-800/60 border border-gray-700 rounded-lg p-2 text-[11px] text-gray-300 flex items-center justify-between">
-                <span>Quiet Reports Momentum:</span>
-                <span class="font-bold text-purple-400">${party.quietCount} / 3 Required</span>
-              </div>
-            ` : ''}
-
-            <div class="flex items-center gap-4 text-xs text-gray-400 my-2">
-              <span class="flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd ${totalReports > 0 ? `<span class="text-[10px] text-gray-500">(${totalReports}${totalReports === 1 ? 'report' : 'reports'})</span>` : ''}</span>
-              <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdated)}</span>
+            ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
+            <div class="flex items-center gap-4 text-xs text-gray-400">
+              <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>
+              <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdated)}</span>
             </div>
-
-            ${party.latestComment ? `
-              <div class="mt-3 bg-gray-800/40 border border-gray-800 rounded-xl p-2.5 flex items-start gap-2">
-                <i data-lucide="message-square" class="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5"></i>
-                <p class="text-xs text-gray-300 italic">"${escapeHtml(party.latestComment)}"</p>
-              </div>
-            ` : ''}
           </div>
-
-          <div class="flex items-center justify-between pt-3 border-t border-gray-800/80 mt-4">
-            <span class="text-xs text-gray-400 font-medium">${party.votes || 0} points</span>
-            <div class="flex gap-1.5">
-              <button onclick="handleVote('${party.id}', 1)" class="p-1.5 rounded-lg border text-xs font-semibold ${sessionVote === '1' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}">
-                ▲ +1
-              </button>
-              <button onclick="handleVote('${party.id}', -1)" class="p-1.5 rounded-lg border text-xs font-semibold ${sessionVote === '-1' ? 'bg-red-600 text-white border-red-500' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}">
-                ▼ -1
-              </button>
-            </div>
+          <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4 text-xs text-purple-400 font-semibold">
+            <span>View Details & Comments →</span>
           </div>
         `;
         grid.appendChild(card);
       });
     }
 
-    // Session-based Vote Handler
-    function handleVote(partyId, val) {
-      const currentVote = sessionStorage.getItem(`vote_${partyId}`);
-      let delta = val;
+    // Interactive Leaflet Map & Dynamic Heatmap Engine
+    function initMap() {
+      if (map) return;
+      map = L.map('campusMap').setView([DEFAULT_LAT, DEFAULT_LNG], 15);
 
-      if (currentVote === String(val)) {
-        delta = -val;
-        sessionStorage.removeItem(`vote_${partyId}`);
-      } else {
-        if (currentVote) delta = val * 2;
-        sessionStorage.setItem(`vote_${partyId}`, String(val));
-      }
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19
+      }).addTo(map);
 
-      db.ref(`parties/${partyId}`).transaction(p => {
-        if (p) { p.votes = (p.votes || 0) + delta; }
-        return p;
-      });
+      updateMapLayers();
     }
 
-    // Status Report Form Submission
-    function handleStatusSubmit(e) {
-      e.preventDefault();
-      const partyId = document.getElementById('reportPartySelect').value;
-      if (!partyId) {
-        alert("Please select a party first.");
-        return;
-      }
+    function updateMapLayers() {
+      if (!map) return;
 
-      const statusType = document.querySelector('input[name="statusType"]:checked').value;
-      const headcountInput = document.getElementById('reportHeadcount').value;
-      const commentInput = document.getElementById('reportComment').value.trim();
+      mapMarkers.forEach(m => map.removeLayer(m));
+      if (heatLayer) map.removeLayer(heatLayer);
+      mapMarkers = [];
 
-      // Block slurs only
-      if (containsSlurs(commentInput)) {
-        alert("Report rejected: Comments containing slurs or hate speech are strictly prohibited.");
-        return;
-      }
+      const heatPoints = [];
 
-      db.ref(`parties/${partyId}`).transaction(p => {
-        if (p) {
-          p.lastUpdated = new Date().toISOString();
-          
-          if (commentInput !== "") {
-            p.latestComment = commentInput;
-          }
+      Object.values(partiesData).forEach(party => {
+        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.01;
+        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.01;
+        const isParty = party.status === 'ACTIVE PARTY';
 
-          if (headcountInput !== "") {
-            let count = parseInt(headcountInput, 10);
-            if (isNaN(count) || count < 0) count = 0;
-            if (count > 2000) count = 2000;
-
-            p.crowdTotalSum = (p.crowdTotalSum || 0) + count;
-            p.crowdReportCount = (p.crowdReportCount || 0) + 1;
-          }
-
-          if (statusType === 'party') {
-            p.status = 'ACTIVE PARTY';
-            p.quietCount = 0;
-          } else if (statusType === 'quiet') {
-            if (p.status === 'ACTIVE PARTY') {
-              p.quietCount = (p.quietCount || 0) + 1;
-              if (p.quietCount >= 3) {
-                p.status = 'QUIET';
-                p.quietCount = 0;
-                p.crowdTotalSum = 0;
-                p.crowdReportCount = 0;
-                p.latestComment = "";
-              }
-            } else {
-              p.status = 'QUIET';
-            }
-          }
-        }
-        return p;
-      });
-
-      document.getElementById('reportForm').reset();
-      alert('Anonymous status update submitted!');
-    }
-
-    // Propose New Party
-    function handleProposeParty(e) {
-      e.preventDefault();
-      const name = document.getElementById('proposeName').value.trim();
-      const location = document.getElementById('proposeLocation').value.trim() || '';
-
-      if (containsSlurs(name) || containsSlurs(location)) {
-        alert("Proposal rejected: Party name or location contains prohibited slurs.");
-        return;
-      }
-
-      const newRef = db.ref('pendingParties').push();
-      newRef.set({ name, location, submittedAt: new Date().toISOString() });
-
-      closeProposeModal();
-      document.getElementById('proposeName').value = '';
-      document.getElementById('proposeLocation').value = '';
-      alert('Party proposed! It will appear on the site once approved by the host.');
-    }
-
-    // Host Panel Authentication Handler
-    function openHostPanel() {
-      if (auth.currentUser) {
-        document.getElementById('hostModal').classList.remove('hidden');
-        loadPendingParties();
-      } else {
-        document.getElementById('adminLoginModal').classList.remove('hidden');
-      }
-    }
-
-    async function handleAdminLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('adminEmail').value;
-      const password = document.getElementById('adminPassword').value;
-      const errorEl = document.getElementById('loginError');
-
-      try {
-        errorEl.classList.add('hidden');
-        await auth.signInWithEmailAndPassword(email, password);
-        closeAdminLoginModal();
-        document.getElementById('hostModal').classList.remove('hidden');
-        loadPendingParties();
-      } catch (err) {
-        errorEl.textContent = "Access Denied: " + err.message;
-        errorEl.classList.remove('hidden');
-      }
-    }
-
-    function handleAdminLogout() {
-      auth.signOut().then(() => {
-        document.getElementById('hostModal').classList.add('hidden');
-        alert("Logged out of Host Panel.");
-      });
-    }
-
-    // Fetch and Manage Pending Parties
-    function loadPendingParties() {
-      const container = document.getElementById('pendingPartiesList');
-      db.ref('pendingParties').on('value', snapshot => {
-        const pending = snapshot.val();
-        container.innerHTML = '';
-
-        if (!pending) {
-          container.innerHTML = '<p class="text-xs text-gray-500 py-4 text-center">No pending party approvals.</p>';
-          return;
+        // Add to heatmap (intensity scaled by crowd average)
+        const totalReports = party.crowdReportCount || 0;
+        const avgCrowd = totalReports > 0 ? Math.round((party.crowdTotalSum || 0) / totalReports) : 10;
+        if (isParty) {
+          heatPoints.push([lat, lng, Math.min(avgCrowd / 300, 1.0)]);
         }
 
-        Object.entries(pending).forEach(([key, item]) => {
-          const div = document.createElement('div');
-          div.className = 'bg-gray-800/70 border border-gray-700 rounded-xl p-3 flex items-center justify-between';
-          div.innerHTML = `
-            <div>
-              <p class="text-xs font-bold text-white">${escapeHtml(item.name)}</p>
-              ${item.location ? `<p class="text-[11px] text-gray-400">${escapeHtml(item.location)}</p>` : ''}
-            </div>
-            <div class="flex gap-2">
-              <button onclick="approveParty('${key}', '${escapeHtml(item.name)}', '${escapeHtml(item.location || '')}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold">Approve</button>
-              <button onclick="rejectParty('${key}')" class="px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg text-xs font-semibold">Reject</button>
-            </div>
-          `;
-          container.appendChild(div);
-        });
+        // Custom Marker
+        const marker = L.circleMarker([lat, lng], {
+          radius: isParty ? 10 : 6,
+          fillColor: isParty ? '#ec4899' : '#6b7280',
+          color: isParty ? '#f472b6' : '#4b5563',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <div style="color: #000; font-size: 12px;">
+            <strong>${escapeHtml(party.name)}</strong><br>
+            Status: ${party.status}<br>
+            Crowd: ~${avgCrowd}
+          </div>
+        `);
+
+        marker.on('click', () => openPartyDetailsModal(party.id));
+        mapMarkers.push(marker);
       });
+
+      if (heatPoints.length > 0 && typeof L.heatLayer === 'function') {
+        heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 17 }).addTo(map);
+      }
     }
 
-    function approveParty(pendingKey, name, location) {
-      const newPartyId = 'p_' + Date.now();
-      db.ref(`parties/${newPartyId}`).set({
-        id: newPartyId,
-        name,
-        location,
-        status: 'QUIET',
-        crowdTotalSum: 0,
-        crowdReportCount: 0,
-        votes: 0,
-        quietCount: 0,
-        latestComment: "",
-        lastUpdated: new Date().toISOString()
-      });
-      db.ref(`pendingParties/${pendingKey}`).remove();
+    function switchView(view) {
+      const grid = document.getElementById('partiesGrid');
+      const mapContainer = document.getElementById('mapViewContainer');
+      const gridBtn = document.getElementById('viewGridBtn');
+      const mapBtn = document.getElementById('viewMapBtn');
+
+      if (view === 'map') {
+        grid.classList.add('hidden');
+        mapContainer.classList.remove('hidden');
+        gridBtn.className = 'px-2.5 py-1 text-xs rounded-md font-semibold text-gray-400 hover:text-white transition flex items-center gap-1';
+        mapBtn.className = 'px-2.5 py-1 text-xs rounded-md font-semibold bg-purple-600 text-white transition flex items-center gap-1';
+        initMap();
+        setTimeout(() => map.invalidateSize(), 200);
+      } else {
+        grid.classList.remove('hidden');
+        mapContainer.classList.add('hidden');
+        gridBtn.className = 'px-2.5 py-1 text-xs rounded-md font-semibold bg-purple-600 text-white transition flex items-center gap-1';
+        mapBtn.className = 'px-2.5 py-1 text-xs rounded-md font-semibold text-gray-400 hover:text-white transition flex items-center gap-1';
+      }
     }
 
-    function rejectParty(pendingKey) {
-      db.ref(`pendingParties/${pendingKey}`).remove();
+    // Party Details Modal & Comment Handlers
+    function openPartyDetailsModal(partyId) {
+      selectedPartyId = partyId;
+      const party = partiesData[partyId];
+      if (!party) return;
+
+      document.getElementById('modalPartyTitle').textContent = party.name;
+      document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
+
+      const commentContainer = document.getElementById('modalCommentContainer');
+      if (party.latestComment) {
+        commentContainer.innerHTML = `
+          <div>
+            <p class="text-xs text-gray-200 italic">"${escapeHtml(party.latestComment)}"</p>
+            <p class="text-[10px] text-gray-500 mt-1">Posted ${timeAgo(party.commentTimestamp)}</p>
+          </div>
+        `;
+      } else {
+        commentContainer.innerHTML = `<p class="text-gray-500 italic text-center">No active comments posted yet.</p>`;
+      }
+
+      document.getElementById('partyDetailsModal').classList.remove('hidden');
     }
 
-    // UI Utilities
-    function populateDropdown() {
-      const select = document.getElementById('reportPartySelect');
-      select.innerHTML = '';
-      const partyList = Object.values(partiesData);
+    function closePartyDetailsModal() {
+      document.getElementById('partyDetailsModal').classList.add('hidden');
+      selectedPartyId = null;
+    }
 
-      if (partyList.length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = '-- No parties available yet --';
-        select.appendChild(opt);
+    function handleModalCommentSubmit(e) {
+      e.preventDefault();
+      if (!selectedPartyId) return;
+
+      const input = document.getElementById('modalCommentInput');
+      const commentText = input.value.trim();
+
+      if (containsSlurs(commentText)) {
+        alert("Comment rejected: Contains prohibited content.");
         return;
       }
 
-      partyList.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.location ? `${p.name} (${p.location})` : p.name;
-        select.appendChild(opt);
+      db.ref(`parties/${selectedPartyId}`).update({
+        latestComment: commentText,
+        commentTimestamp: new Date().toISOString()
+      });
+
+      input.value = '';
+      closePartyDetailsModal();
+    }
+
+    function togglePushSubscription() {
+      if (!("Notification" in window)) {
+        alert("Web Push Notifications are not supported on this browser.");
+        return;
+      }
+
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          alert("Subscribed! You will receive push alerts when this party activates.");
+        } else {
+          alert("Notification permission denied.");
+        }
       });
     }
 
-    function setFilter(filter) {
-      activeFilter = filter;
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800';
-      });
-      document.getElementById(`filter-${filter}`).className = 'filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-purple-600 text-white';
-      renderPartiesGrid();
-    }
-
-    function filterParties() { renderPartiesGrid(); }
-    function openProposeModal() { document.getElementById('proposeModal').classList.remove('hidden'); }
-    function closeProposeModal() { document.getElementById('proposeModal').classList.add('hidden'); }
-    function closeAdminLoginModal() { document.getElementById('adminLoginModal').classList.add('hidden'); }
-    function closeHostModal() { document.getElementById('hostModal').classList.add('hidden'); }
-
-    function escapeHtml(str) {
-      return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '';
-    }
-
+    // Helper Utilities
+    function setFilter(filter) { activeFilter = filter; renderUI(); }
+    function filterParties() { renderUI(); }
+    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
     function timeAgo(dateString) {
       if (!dateString) return 'just now';
       const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
       if (seconds < 60) return `${seconds}s ago`;
       const minutes = Math.floor(seconds / 60);
-      if (minutes < 60) return `${minutes}m ago`;
-      const hours = Math.floor(minutes / 60);
-      return `${hours}h ago`;
+      return `${minutes}m ago`;
+    }
+
+    function openBugModal() { document.getElementById('bugModal').classList.remove('hidden'); }
+    function closeBugModal() { document.getElementById('bugModal').classList.add('hidden'); }
+    function openFeatureModal() { document.getElementById('featureModal').classList.remove('hidden'); }
+    function closeFeatureModal() { document.getElementById('featureModal').classList.add('hidden'); }
+    function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
+    function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
+    function openProposeModal() { document.getElementById('proposeModal').classList.remove('hidden'); }
+    function closeProposeModal() { document.getElementById('proposeModal').classList.add('hidden'); }
+    function openHostPanel() { document.getElementById('hostModal').classList.remove('hidden'); }
+    function closeHostModal() { document.getElementById('hostModal').classList.add('hidden'); }
+
+    function populateDropdown() {
+      const select = document.getElementById('reportPartySelect');
+      select.innerHTML = '';
+      Object.values(partiesData).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
     }
 
     document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
