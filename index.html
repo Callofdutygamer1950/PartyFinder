@@ -219,7 +219,7 @@
         </button>
 
         <!-- Admin Login / Panel Button -->
-        <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
+        <button onclick="handleAdminButtonClick()" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
           <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
           <span id="adminNavText">Admin Login</span>
           <span id="adminNavBadge" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
@@ -246,7 +246,7 @@
             <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
             <span>Share</span>
           </button>
-          <!-- Restored Subscribe Toggle Button -->
+          <!-- Subscribe Toggle Button -->
           <button id="modalSubscribeBtn" onclick="togglePartySubscription()" class="px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition">
             <i data-lucide="bell" class="w-3.5 h-3.5"></i>
             <span id="modalSubscribeText">Subscribe</span>
@@ -258,7 +258,7 @@
       <!-- Live Voting Bar Inside Modal -->
       <div class="flex items-center justify-between bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 mb-4">
         <span class="text-xs font-medium text-gray-300">Rate this Location:</span>
-        <div class="flex items-center gap-3" id="modalVotingContainer">
+        <div class="flex items-center gap-3">
           <button id="modalUpvoteBtn" onclick="castPartyVote(selectedPartyId, 'up')" class="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
             <i data-lucide="thumbs-up" class="w-3.5 h-3.5"></i> <span id="modalUpvoteCount">0</span>
           </button>
@@ -439,6 +439,12 @@
           <input type="hidden" id="proposeLng">
         </div>
 
+        <div>
+          <label for="proposeDuration" class="block text-xs font-semibold text-gray-400 mb-1">How long should it be listed? <span class="font-normal text-gray-500">(optional)</span></label>
+          <select id="proposeDuration" class="js-duration-select w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"></select>
+          <p class="text-[10px] text-gray-500 mt-1">One-night party? Pick a time and it removes itself afterwards.</p>
+        </div>
+
         <div class="flex justify-end gap-3 pt-2">
           <button type="button" onclick="closeProposeModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
           <button type="submit" class="px-4 py-2 text-xs bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg">Submit for Approval</button>
@@ -473,7 +479,7 @@
     </div>
   </div>
 
-  <!-- Admin Panel Modal with Location Management & Pending Proposals -->
+  <!-- Admin Panel Modal (tabbed) -->
   <div id="hostModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
@@ -542,7 +548,7 @@
               <button onclick="resetAllVotes()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Reset all votes now</button>
               <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
             </div>
-            <p class="text-[10px] text-gray-500 mt-2">Comments delete themselves after 12 hours, and all votes reset every day at 8am. Use "Reset votes" on a location in the Locations tab to zero its 👍/👎.</p>
+            <p class="text-[10px] text-gray-500 mt-2">Comments delete themselves after 12 hours, and all votes reset every day at 8am. Use "Reset party" in the Locations tab to zero a party's votes, mark it Dead and clear its comments.</p>
           </div>
 
           <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
@@ -592,6 +598,10 @@
             <label class="block text-[10px] text-gray-400 mb-1">Longitude</label>
             <input type="number" step="any" id="editPartyLng" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-white">
           </div>
+        </div>
+        <div>
+          <label for="editPartyDuration" class="block text-xs font-semibold text-gray-400 mb-1">Remove automatically</label>
+          <select id="editPartyDuration" class="js-duration-select w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white"></select>
         </div>
         <div>
           <div id="editPartyMap" class="h-44 rounded-xl border border-gray-700 overflow-hidden"></div>
@@ -687,6 +697,43 @@
       if (renderQueued) return;
       renderQueued = true;
       requestAnimationFrame(() => { renderQueued = false; renderUI(); });
+    }
+
+    // ---- Timed listings: optional auto-removal after a set time ----
+    const DURATION_OPTIONS = [
+      { hours: 3, label: '3 hours' },
+      { hours: 6, label: '6 hours' },
+      { hours: 12, label: '12 hours' },
+      { hours: 24, label: '24 hours' },
+      { hours: 48, label: '2 days' },
+      { hours: 72, label: '3 days' },
+      { hours: 168, label: '1 week' }
+    ];
+
+    // Fills a duration <select>; "keepLabel" adds a first option that leaves an existing timer alone
+    function fillDurationSelect(select, selectedHours, keepLabel) {
+      select.innerHTML = '';
+      const add = (value, label) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        select.appendChild(opt);
+      };
+      if (keepLabel) add('keep', keepLabel);
+      add('', 'Never (stays until deleted)');
+      DURATION_OPTIONS.forEach(o => add(String(o.hours), `After ${o.label}`));
+      select.value = keepLabel ? 'keep' : (selectedHours ? String(selectedHours) : '');
+    }
+
+    const isExpiredParty = party => toCount(party && party.expiresAt) > 0 && party.expiresAt <= serverNow();
+    // Parties visitors should see (timed parties disappear the moment they expire)
+    const visiblePartyEntries = () => Object.entries(partiesData).filter(([, party]) => !isExpiredParty(party));
+
+    function timeLeft(ms) {
+      const minutes = Math.max(1, Math.round(ms / 60000));
+      if (minutes < 60) return `${minutes}m`;
+      const hours = Math.round(minutes / 60);
+      return hours < 48 ? `${hours}h` : `${Math.round(hours / 24)}d`;
     }
 
     function recentReportCount(partyId) {
@@ -893,7 +940,6 @@
         db.ref('commentFlags').on('value', onAdminFlagsValue, () => {});
         adminReportLogRef = db.ref('reportLog').orderByChild('at').startAt(serverNow() - 30 * DAY_MS);
         adminReportLogRef.on('value', onAdminReportLogValue, showAdminLoadError('adminStats', 'stats'));
-        migrateLegacyComments();
         if (navText) navText.textContent = 'Admin Panel';
         if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
       } else {
@@ -915,9 +961,7 @@
         }
       }
 
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     });
 
     function handleAdminButtonClick() {
@@ -1004,7 +1048,7 @@
       setBadge('adminNavBadge', proposals + flagged);
     }
 
-    // Direct Firebase database listener for parties with Browser Notifications
+    // Live party data; also alerts this tab when a subscribed party changes status
     db.ref('parties').on('value', (snapshot) => {
       const oldData = partiesData;
       partiesData = snapshot.val() || {};
@@ -1026,7 +1070,6 @@
       renderUI();
       renderAdminLocationsList();
       updateModalVoteUI();
-      if (currentAdminUser) migrateLegacyComments();
 
       if (pendingSharedPartyId) {
         if (partiesData[pendingSharedPartyId]) openPartyDetailsModal(pendingSharedPartyId);
@@ -1049,22 +1092,19 @@
       renderPartiesGrid();
       populateDropdown();
       if (map) updateMapLayers();
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     }
 
     function renderPartiesGrid() {
       const grid = document.getElementById('partiesGrid');
       grid.innerHTML = '';
 
-      const partyList = Object.values(partiesData);
-      if (partyList.length === 0) {
+      const entries = visiblePartyEntries();
+      if (entries.length === 0) {
         grid.innerHTML = `<div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40"><p class="text-sm text-gray-300 font-semibold">No Locations Listed</p></div>`;
         return;
       }
 
-      const entries = Object.entries(partiesData);
       if (activeSort === 'CLOSE' && userCoords) {
         entries.sort(([, a], [, b]) => partyDistance(a) - partyDistance(b));
       } else if (activeSort === 'NEW') {
@@ -1110,6 +1150,7 @@
             </div>
             ${recentReports > 0 ? `<p class="text-[10px] text-pink-300 font-medium mb-2">🔥 ${recentReports} report${recentReports === 1 ? '' : 's'} in the last hour</p>` : ''}
             ${isStale ? `<p class="text-[10px] text-gray-400 font-medium mb-2">⏳ No updates for ${Math.floor(updatedAgo / HOUR_MS)}h, so this may be outdated</p>` : ''}
+            ${party.expiresAt ? `<p class="text-[10px] text-purple-300 font-medium mb-2">⏳ Listing ends in ${timeLeft(party.expiresAt - serverNow())}</p>` : ''}
 
             ${isParty && quietCount > 0 && quietCount < 3 ? `<p class="text-[10px] text-amber-400 font-medium mb-2">💀 Dead reports: ${quietCount}/3 required</p>` : ''}
           </div>
@@ -1156,15 +1197,15 @@
               ${party.isPermanent ? `<span class="text-[9px] text-purple-400 font-semibold">(Permanent Staple)</span>` : ''}
               <span class="text-[10px] px-2 py-0.5 rounded ${effectiveStatus(party) === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${statusLabel(effectiveStatus(party))}</span>
             </div>
-            <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
+            <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}${party.expiresAt ? ` • <span class="text-purple-300">⏳ ${isExpiredParty(party) ? 'expired, removing shortly' : `removes in ${timeLeft(party.expiresAt - serverNow())}`}</span>` : ''}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button class="js-reset-votes px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Reset votes</button>
+            <button class="js-reset-party px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium" title="Votes to 0, mark Dead, delete comments">Reset party</button>
             <button class="js-edit px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
             <button class="js-delete px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
-        item.querySelector('.js-reset-votes').addEventListener('click', () => resetPartyVotes(partyId));
+        item.querySelector('.js-reset-party').addEventListener('click', () => resetParty(partyId));
         item.querySelector('.js-edit').addEventListener('click', () => openAdminEditLocationModal(partyId));
         item.querySelector('.js-delete').addEventListener('click', () => handleAdminDeleteLocation(partyId));
         container.appendChild(item);
@@ -1193,7 +1234,7 @@
             <span class="w-5 h-5 shrink-0 rounded-full bg-amber-500 text-gray-900 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
             <div class="min-w-0">
               <span class="font-bold text-white text-xs block">${escapeHtml(prop.name)}</span>
-              <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.createdAt || prop.submittedAt)}</p>
+              <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.createdAt)}${toCount(prop.durationHours) ? ` • <span class="text-purple-300">⏳ ${toCount(prop.durationHours)}h listing</span>` : ''}</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -1267,6 +1308,7 @@
       document.getElementById('editPartyStatus').value = 'ACTIVE PARTY';
       document.getElementById('editPartyLat').value = prop.lat || DEFAULT_LAT;
       document.getElementById('editPartyLng').value = prop.lng || DEFAULT_LNG;
+      fillDurationSelect(document.getElementById('editPartyDuration'), toCount(prop.durationHours));
       document.getElementById('adminLocationModalHeader').textContent = 'Review Proposal';
       document.getElementById('editSaveBtn').textContent = 'Approve with Changes';
       document.getElementById('adminEditLocationModal').classList.remove('hidden');
@@ -1331,12 +1373,13 @@
         return;
       }
 
-      whenSignedIn().then(() => submitProposal(name, location, lat, lng)).catch(err => alert(err.message));
+      const durationHours = Number(document.getElementById('proposeDuration').value) || null;
+      whenSignedIn().then(() => submitProposal(name, location, lat, lng, durationHours)).catch(err => alert(err.message));
     }
 
     const SUBMIT_COOLDOWN_MESSAGE = 'Please wait 2 minutes between submissions.';
 
-    function submitProposal(name, location, lat, lng) {
+    function submitProposal(name, location, lat, lng, durationHours) {
       const newProposalRef = db.ref('proposals').push();
       const proposalData = {
         id: newProposalRef.key,
@@ -1346,8 +1389,9 @@
         lng: lng,
         status: 'QUIET',
         submittedAt: new Date().toISOString(),
-        createdAt: firebase.database.ServerValue.TIMESTAMP
+        createdAt: TIMESTAMP
       };
+      if (durationHours) proposalData.durationHours = durationHours;
 
       db.ref().update({
         [`proposals/${newProposalRef.key}`]: proposalData,
@@ -1363,9 +1407,27 @@
           document.getElementById('proposeLat').value = '';
           document.getElementById('proposeLng').value = '';
           document.getElementById('mapPinButtonText').textContent = 'Click to Pick Location on Map';
+          document.getElementById('proposeDuration').value = '';
           closeProposeModal();
         }
       });
+    }
+
+    // A freshly approved party starts with clean counters
+    const expiryFromHours = hours => (toCount(hours) ? Math.round(serverNow() + toCount(hours) * HOUR_MS) : null);
+
+    function newPartyRecord(id, fields) {
+      return Object.assign({
+        id,
+        status: 'ACTIVE PARTY',
+        isPermanent: false,
+        crowdReportCount: 0,
+        crowdTotalSum: 0,
+        quietReportsCount: 0,
+        upvotes: 0,
+        downvotes: 0,
+        lastUpdatedAt: TIMESTAMP
+      }, fields);
     }
 
     function approveProposal(propId) {
@@ -1373,27 +1435,12 @@
         const prop = snapshot.val();
         if (!prop) return;
 
-        const newParty = {
-          id: propId,
-          name: prop.name,
-          location: prop.location,
-          lat: prop.lat,
-          lng: prop.lng,
-          status: 'ACTIVE PARTY',
-          isPermanent: false,
-          crowdReportCount: 0,
-          crowdTotalSum: 0,
-          quietReportsCount: 0,
-          upvotes: 0,
-          downvotes: 0,
-          lastUpdatedAt: TIMESTAMP
-        };
-
-        const updates = {};
-        updates[`parties/${propId}`] = newParty;
-        updates[`proposals/${propId}`] = null;
-
-        db.ref().update(updates, (err) => {
+        db.ref().update({
+          [`parties/${propId}`]: newPartyRecord(propId, {
+            name: prop.name, location: prop.location, lat: prop.lat, lng: prop.lng, expiresAt: expiryFromHours(prop.durationHours)
+          }),
+          [`proposals/${propId}`]: null
+        }, (err) => {
           if (!err) alert(`Approved "${prop.name}"! It is now live on the app.`);
         });
       });
@@ -1412,6 +1459,7 @@
       document.getElementById('editPartyStatus').value = 'QUIET';
       document.getElementById('editPartyLat').value = DEFAULT_LAT;
       document.getElementById('editPartyLng').value = DEFAULT_LNG;
+      fillDurationSelect(document.getElementById('editPartyDuration'));
       document.getElementById('adminLocationModalHeader').textContent = 'Add New Location';
       document.getElementById('editProposalId').value = '';
       document.getElementById('editSaveBtn').textContent = 'Save Changes';
@@ -1429,6 +1477,8 @@
       document.getElementById('editPartyStatus').value = party.status || 'QUIET';
       document.getElementById('editPartyLat').value = party.lat || DEFAULT_LAT;
       document.getElementById('editPartyLng').value = party.lng || DEFAULT_LNG;
+      fillDurationSelect(document.getElementById('editPartyDuration'), null,
+        party.expiresAt ? `Keep current timer (removes in ${timeLeft(party.expiresAt - serverNow())})` : null);
       document.getElementById('adminLocationModalHeader').textContent = 'Edit Location Info';
       document.getElementById('editProposalId').value = '';
       document.getElementById('editSaveBtn').textContent = 'Save Changes';
@@ -1447,21 +1497,14 @@
         const name = document.getElementById('editPartyName').value.trim();
         const status = document.getElementById('editPartyStatus').value;
         db.ref().update({
-          [`parties/${proposalId}`]: {
-            id: proposalId,
+          [`parties/${proposalId}`]: newPartyRecord(proposalId, {
             name,
+            status,
             location: document.getElementById('editPartyLocation').value.trim() || 'Campus Area',
             lat: parseFloat(document.getElementById('editPartyLat').value) || DEFAULT_LAT,
             lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
-            status,
-            isPermanent: false,
-            crowdReportCount: 0,
-            crowdTotalSum: 0,
-            quietReportsCount: 0,
-            upvotes: 0,
-            downvotes: 0,
-            lastUpdatedAt: TIMESTAMP
-          },
+            expiresAt: expiryFromHours(document.getElementById('editPartyDuration').value)
+          }),
           [`proposals/${proposalId}`]: null
         }).then(() => {
           closeAdminEditLocationModal();
@@ -1485,6 +1528,8 @@
         quietReportsCount: newStatus === 'QUIET' ? 0 : (existing.quietReportsCount || 0),
         lastUpdatedAt: TIMESTAMP
       };
+      const duration = document.getElementById('editPartyDuration').value;
+      if (duration !== 'keep') updated.expiresAt = expiryFromHours(duration);
 
       if (newStatus === 'QUIET') db.ref(`quietVoters/${id}`).remove();
       db.ref(`parties/${id}`).update(updated, (err) => {
@@ -1599,7 +1644,7 @@
     // Upvote / Downvote: one vote per party per visitor; picking the other option switches the vote,
     // clicking your current vote again removes it
     function getMyVote(partyId) {
-      return localStorage.getItem(`vote_${partyId}`) || sessionStorage.getItem(`voted_${partyId}`);
+      return localStorage.getItem(`vote_${partyId}`);
     }
 
     // Votes reset every morning at 8am (Apps Script) or from the Admin Panel; forget this browser's remembered votes
@@ -1607,7 +1652,6 @@
       const resetAt = Number(snap.val()) || 0;
       if (resetAt <= (Number(localStorage.getItem('votesResetSeen')) || 0)) return;
       Object.keys(localStorage).filter(k => k.startsWith('vote_')).forEach(k => localStorage.removeItem(k));
-      Object.keys(sessionStorage).filter(k => k.startsWith('voted_')).forEach(k => sessionStorage.removeItem(k));
       localStorage.setItem('votesResetSeen', String(resetAt));
       renderUI();
       updateModalVoteUI();
@@ -1634,7 +1678,6 @@
           // Save the choice first so the re-render triggered by this write shows the highlight
           if (newVote) localStorage.setItem(`vote_${partyId}`, newVote);
           else localStorage.removeItem(`vote_${partyId}`);
-          sessionStorage.removeItem(`voted_${partyId}`);
           return db.ref().update(updates).catch((err) => {
             if (previous) localStorage.setItem(`vote_${partyId}`, previous);
             else localStorage.removeItem(`vote_${partyId}`);
@@ -2100,14 +2143,21 @@
     }
 
     // ---- Admin cleanup tools ----
-    function resetPartyVotes(partyId) {
+    // Fresh start for one party: votes to 0, marked Dead, comments deleted
+    function resetParty(partyId) {
       const party = partiesData[partyId];
-      if (!party || !confirm(`Reset all votes on "${party.name}" to 0?`)) return;
+      if (!party || !confirm(`Reset "${party.name}"?\n\nThis sets its votes to 0, marks it 💀 Dead, and deletes all of its comments.`)) return;
       db.ref().update({
         [`parties/${partyId}/upvotes`]: 0,
         [`parties/${partyId}/downvotes`]: 0,
-        [`votes/${partyId}`]: null
-      }).then(() => alert('Votes reset.'), err => alert('Reset failed: ' + err.message));
+        [`parties/${partyId}/status`]: 'QUIET',
+        [`parties/${partyId}/quietReportsCount`]: 0,
+        [`parties/${partyId}/lastUpdatedAt`]: TIMESTAMP,
+        [`votes/${partyId}`]: null,
+        [`quietVoters/${partyId}`]: null,
+        [`comments/${partyId}`]: null,
+        [`commentFlags/${partyId}`]: null
+      }).then(() => alert(`"${party.name}" has been reset.`), err => alert('Reset failed: ' + err.message));
     }
 
 
@@ -2132,25 +2182,6 @@
       }).catch(err => alert('Clear failed: ' + err.message));
     }
 
-    // One-time move of comments stored under parties/{id}/comments into comments/{id}
-    let migratingComments = false;
-    function migrateLegacyComments() {
-      if (migratingComments) return;
-      const updates = {};
-      Object.entries(partiesData).forEach(([partyId, party]) => {
-        if (!party.comments) return;
-        Object.entries(party.comments).forEach(([commentId, c]) => {
-          if (!c || typeof c.text !== 'string') return;
-          updates[`comments/${partyId}/${commentId}`] = { text: c.text.slice(0, 180), createdAt: Date.parse(c.timestamp) || serverNow() };
-        });
-        updates[`parties/${partyId}/comments`] = null;
-      });
-      if (Object.keys(updates).length === 0) return;
-      migratingComments = true;
-      db.ref().update(updates)
-        .catch(err => console.error('Comment migration failed:', err))
-        .finally(() => { migratingComments = false; });
-    }
 
     function openPartyDetailsModal(partyId) {
       selectedPartyId = partyId;
@@ -2258,12 +2289,12 @@
       if (!map) return;
 
       Object.keys(mapMarkersById).forEach(partyId => {
-        if (partiesData[partyId]) return;
+        if (partiesData[partyId] && !isExpiredParty(partiesData[partyId])) return;
         map.removeLayer(mapMarkersById[partyId].marker);
         delete mapMarkersById[partyId];
       });
 
-      Object.entries(partiesData).forEach(([partyId, party]) => {
+      visiblePartyEntries().forEach(([partyId, party]) => {
         const lat = Number(party.lat) || DEFAULT_LAT;
         const lng = Number(party.lng) || DEFAULT_LNG;
         const live = effectiveStatus(party) === 'ACTIVE PARTY';
@@ -2395,49 +2426,47 @@
     }
 
     // Dynamic Feedback Modal & Header Button Logic
+    const FEEDBACK_STYLES = {
+      BUG: { label: 'Report Bug', icon: 'bug', color: 'red', placeholder: 'Describe what went wrong or steps to reproduce...' },
+      FEATURE: { label: 'Request Feature', icon: 'lightbulb', color: 'amber', placeholder: "Suggest an idea or describe a feature you'd like..." }
+    };
+
+    // Class strings are written out in full (not built from the color) so the Tailwind build keeps them
+    const FEEDBACK_CLASSES = {
+      red: {
+        headerBtn: 'text-red-400 border-red-500/30 hover:border-red-500/60',
+        iconBox: 'bg-red-500/20 p-2 rounded-xl text-red-400',
+        toggleOn: 'bg-red-600 text-white',
+        submit: 'bg-red-600 hover:bg-red-500'
+      },
+      amber: {
+        headerBtn: 'text-amber-400 border-amber-500/30 hover:border-amber-500/60',
+        iconBox: 'bg-amber-500/20 p-2 rounded-xl text-amber-400',
+        toggleOn: 'bg-amber-600 text-white',
+        submit: 'bg-amber-600 hover:bg-amber-500'
+      }
+    };
+
     function setFeedbackType(type) {
       feedbackType = type;
+      const style = FEEDBACK_STYLES[type];
+      const classes = FEEDBACK_CLASSES[style.color];
+      const toggleBase = 'flex-1 py-1.5 text-xs font-semibold rounded-lg transition';
 
-      const headerBtn = document.getElementById('headerFeedbackBtn');
-      const headerTitle = document.getElementById('headerFeedbackTitle');
-      const headerIcon = document.getElementById('headerFeedbackIcon');
-      
-      const bugToggleBtn = document.getElementById('feedbackTypeBug');
-      const featureToggleBtn = document.getElementById('feedbackTypeFeature');
-      const modalTitle = document.getElementById('feedbackModalTitle');
-      const modalIconBox = document.getElementById('feedbackModalIconBox');
-      const modalTextarea = document.getElementById('feedbackText');
-      const modalSubmitBtn = document.getElementById('feedbackSubmitBtn');
+      document.getElementById('headerFeedbackTitle').textContent = style.label;
+      document.getElementById('headerFeedbackIcon').setAttribute('data-lucide', style.icon);
+      document.getElementById('headerFeedbackBtn').className = `px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 border rounded-xl flex items-center gap-1.5 transition ${classes.headerBtn}`;
 
-      if (type === 'BUG') {
-        headerTitle.textContent = "Report Bug";
-        headerIcon.setAttribute('data-lucide', 'bug');
-        headerBtn.className = "px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-xl flex items-center gap-1.5 transition";
+      document.getElementById('feedbackModalTitle').textContent = style.label;
+      const iconBox = document.getElementById('feedbackModalIconBox');
+      iconBox.className = classes.iconBox;
+      iconBox.innerHTML = `<i data-lucide="${style.icon}" class="w-5 h-5"></i>`;
+      document.getElementById('feedbackTypeBug').className = `${toggleBase} ${type === 'BUG' ? classes.toggleOn : 'text-gray-400'}`;
+      document.getElementById('feedbackTypeFeature').className = `${toggleBase} ${type === 'FEATURE' ? classes.toggleOn : 'text-gray-400'}`;
+      document.getElementById('feedbackText').placeholder = style.placeholder;
+      document.getElementById('feedbackSubmitBtn').className = `px-4 py-2 text-xs text-white font-semibold rounded-lg ${classes.submit}`;
 
-        modalTitle.textContent = "Report Bug";
-        modalIconBox.className = "bg-red-500/20 p-2 rounded-xl text-red-400";
-        modalIconBox.innerHTML = '<i data-lucide="bug" class="w-5 h-5"></i>';
-        bugToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition';
-        featureToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
-        modalTextarea.placeholder = "Describe what went wrong or steps to reproduce...";
-        modalSubmitBtn.className = 'px-4 py-2 text-xs bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg';
-      } else {
-        headerTitle.textContent = "Request Feature";
-        headerIcon.setAttribute('data-lucide', 'lightbulb');
-        headerBtn.className = "px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center gap-1.5 transition";
-
-        modalTitle.textContent = "Request Feature";
-        modalIconBox.className = "bg-amber-500/20 p-2 rounded-xl text-amber-400";
-        modalIconBox.innerHTML = '<i data-lucide="lightbulb" class="w-5 h-5"></i>';
-        featureToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white transition';
-        bugToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
-        modalTextarea.placeholder = "Suggest an idea or describe a feature you'd like...";
-        modalSubmitBtn.className = 'px-4 py-2 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg';
-      }
-
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     }
 
     function handleFeedbackSubmit(e) {
@@ -2465,6 +2494,11 @@
     function closeFeedbackModal() { document.getElementById('feedbackModal').classList.add('hidden'); }
 
     // Helpers & Utilities
+    // Draws any <i data-lucide="..."> icons added since the last call
+    function refreshIcons() {
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;") : ''; }
     function toCount(val) { const n = Number(val); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; }
     function timeAgo(value) {
@@ -2489,13 +2523,13 @@
       const select = document.getElementById('reportPartySelect');
       const selected = select.value;
       select.innerHTML = '';
-      Object.entries(partiesData).forEach(([partyId, p]) => {
+      visiblePartyEntries().forEach(([partyId, p]) => {
         const opt = document.createElement('option');
         opt.value = partyId;
         opt.textContent = p.name;
         select.appendChild(opt);
       });
-      if (selected && partiesData[selected]) select.value = selected;
+      if (selected && partiesData[selected] && !isExpiredParty(partiesData[selected])) select.value = selected;
     }
 
     function openAboutModal() { document.getElementById('aboutModal').classList.remove('hidden'); }
@@ -2579,12 +2613,11 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       setupAccessibleModals();
+      fillDurationSelect(document.getElementById('proposeDuration'));
       setFeedbackType('FEATURE');
       renderUI();
       setInterval(renderUI, 60 * 1000);
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     });
   </script>
 </body>
