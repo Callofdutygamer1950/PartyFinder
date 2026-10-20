@@ -488,7 +488,7 @@
       const lowerText = text.toLowerCase();
       return BLOCKED_WORDS.some(word => {
         const regex = new RegExp(`\\b${word}\\b`, 'i');
-        return regex.test(lowerText) || lowerText.includes(word);
+        return regex.test(lowerText);
       });
     }
 
@@ -498,12 +498,15 @@
       const navText = document.getElementById('adminNavText');
       const navIcon = document.getElementById('adminNavIcon');
 
+      db.ref('proposals').off('value', onProposalsValue);
       if (user) {
+        db.ref('proposals').on('value', onProposalsValue, () => renderAdminProposalsList({}));
         if (navText) navText.textContent = 'Host Panel';
         if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
       } else {
         if (navText) navText.textContent = 'Host Login';
         if (navIcon) navIcon.setAttribute('data-lucide', 'lock');
+        renderAdminProposalsList({});
         closeHostModal();
       }
 
@@ -571,11 +574,10 @@
       renderAdminLocationsList();
     });
 
-    // Listen for incoming party proposals
-    db.ref('proposals').on('value', (snapshot) => {
-      const proposalsData = snapshot.val() || {};
-      renderAdminProposalsList(proposalsData);
-    });
+    // Listen for incoming party proposals (admins only; attached on sign-in)
+    function onProposalsValue(snapshot) {
+      renderAdminProposalsList(snapshot.val() || {});
+    }
 
     db.ref('fundraiser/raised').on('value', (snapshot) => {
       const raised = snapshot.val() || 0;
@@ -601,28 +603,28 @@
         return;
       }
 
-      partyList.forEach(party => {
+      Object.entries(partiesData).forEach(([partyId, party]) => {
         if (activeFilter === 'PARTY' && party.status !== 'ACTIVE PARTY') return;
         if (activeFilter === 'QUIET' && party.status !== 'QUIET') return;
 
         const isParty = party.status === 'ACTIVE PARTY';
-        const totalReports = party.crowdReportCount || 0;
-        const avgCrowd = Math.min(totalReports > 0 ? Math.round((party.crowdTotalSum || 0) / totalReports) : 0, 2000);
-        const upvotes = party.upvotes || 0;
-        const downvotes = party.downvotes || 0;
-        const quietCount = party.quietReportsCount || 0;
+        const totalReports = toCount(party.crowdReportCount);
+        const avgCrowd = Math.min(totalReports > 0 ? Math.round(toCount(party.crowdTotalSum) / totalReports) : 0, 2000);
+        const upvotes = toCount(party.upvotes);
+        const downvotes = toCount(party.downvotes);
+        const quietCount = toCount(party.quietReportsCount);
 
         const card = document.createElement('div');
         card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 cursor-pointer transition`;
         
         card.innerHTML = `
-          <div onclick="openPartyDetailsModal('${party.id}')">
+          <div class="js-open-details">
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
                 ${party.isPermanent ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-purple-900/60 text-purple-300 border border-purple-500/30 font-semibold">Staple</span>` : ''}
               </div>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${party.status}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${escapeHtml(party.status)}</span>
             </div>
             ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
             
@@ -637,16 +639,19 @@
           <!-- Upvote / Downvote Inline Bar -->
           <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-2 text-xs">
             <div class="flex items-center gap-2">
-              <button onclick="event.stopPropagation(); castPartyVote('${party.id}', 'up')" class="px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+              <button class="js-vote-up "px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                 👍 <span>${upvotes}</span>
               </button>
-              <button onclick="event.stopPropagation(); castPartyVote('${party.id}', 'down')" class="px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+              <button class="js-vote-down "px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                 👎 <span>${downvotes}</span>
               </button>
             </div>
-            <span onclick="openPartyDetailsModal('${party.id}')" class="text-purple-400 font-semibold text-xs hover:underline">Details & Comments →</span>
+            <span class="js-open-details text-purple-400 font-semibold text-xs hover:underline">Details & Comments →</span>
           </div>
         `;
+        card.querySelectorAll('.js-open-details').forEach(el => el.addEventListener('click', () => openPartyDetailsModal(partyId)));
+        card.querySelector('.js-vote-up').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'up'); });
+        card.querySelector('.js-vote-down').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'down'); });
         grid.appendChild(card);
       });
 
@@ -658,7 +663,7 @@
       if (!container) return;
       container.innerHTML = '';
 
-      Object.values(partiesData).forEach(party => {
+      Object.entries(partiesData).forEach(([partyId, party]) => {
         const item = document.createElement('div');
         item.className = 'bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 flex justify-between items-center gap-3';
         item.innerHTML = `
@@ -666,15 +671,17 @@
             <div class="flex items-center gap-2">
               <span class="font-bold text-white text-xs">${escapeHtml(party.name)}</span>
               ${party.isPermanent ? `<span class="text-[9px] text-purple-400 font-semibold">(Permanent Staple)</span>` : ''}
-              <span class="text-[10px] px-2 py-0.5 rounded ${party.status === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${party.status}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded ${party.status === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${escapeHtml(party.status)}</span>
             </div>
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openAdminEditLocationModal('${party.id}')" class="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
-            <button onclick="handleAdminDeleteLocation('${party.id}')" class="px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
+            <button class="js-edit "px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
+            <button class="js-delete "px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
+        item.querySelector('.js-edit').addEventListener('click', () => openAdminEditLocationModal(partyId));
+        item.querySelector('.js-delete').addEventListener('click', () => handleAdminDeleteLocation(partyId));
         container.appendChild(item);
       });
     }
@@ -684,13 +691,13 @@
       if (!container) return;
       container.innerHTML = '';
 
-      const proposalList = Object.values(proposalsData);
+      const proposalList = Object.entries(proposalsData);
       if (proposalList.length === 0) {
         container.innerHTML = '<p class="text-xs text-gray-500 italic">No pending party proposals.</p>';
         return;
       }
 
-      proposalList.forEach(prop => {
+      proposalList.forEach(([propId, prop]) => {
         const item = document.createElement('div');
         item.className = 'bg-gray-900/80 border border-amber-500/30 rounded-xl p-3 flex justify-between items-center gap-3';
         item.innerHTML = `
@@ -699,10 +706,12 @@
             <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.submittedAt)}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="approveProposal('${prop.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg font-semibold transition">Approve</button>
-            <button onclick="rejectProposal('${prop.id}')" class="px-2.5 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded-lg font-semibold transition">Reject</button>
+            <button class="js-approve "px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg font-semibold transition">Approve</button>
+            <button class="js-reject "px-2.5 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded-lg font-semibold transition">Reject</button>
           </div>
         `;
+        item.querySelector('.js-approve').addEventListener('click', () => approveProposal(propId));
+        item.querySelector('.js-reject').addEventListener('click', () => rejectProposal(propId));
         container.appendChild(item);
       });
 
@@ -781,7 +790,7 @@
         if (!prop) return;
 
         const newParty = {
-          id: prop.id,
+          id: propId,
           name: prop.name,
           location: prop.location,
           lat: prop.lat,
@@ -797,8 +806,8 @@
         };
 
         const updates = {};
-        updates[`parties/${prop.id}`] = newParty;
-        updates[`proposals/${prop.id}`] = null;
+        updates[`parties/${propId}`] = newParty;
+        updates[`proposals/${propId}`] = null;
 
         db.ref().update(updates, (err) => {
           if (!err) alert(`Approved "${prop.name}"! It is now live on the app.`);
@@ -904,38 +913,42 @@
         return;
       }
 
+      const partyRef = db.ref(`parties/${partyId}`);
       const updates = {
         lastUpdated: new Date().toISOString()
       };
 
-      let alertMessage = "";
+      if (headcountInput > 0) {
+        updates.crowdReportCount = firebase.database.ServerValue.increment(1);
+        updates.crowdTotalSum = firebase.database.ServerValue.increment(Math.min(headcountInput, 2000));
+      }
 
-      if (statusType === 'quiet') {
-        const currentQuiet = (party.quietReportsCount || 0) + 1;
-        if (currentQuiet >= 3) {
-          updates.status = 'QUIET';
-          updates.quietReportsCount = 0;
-          alertMessage = `3 Quiet reports reached! "${party.name}" is now marked QUIET.`;
-        } else {
-          updates.quietReportsCount = currentQuiet;
-          alertMessage = `Report received (${currentQuiet}/3 required to mark quiet).`;
-        }
-      } else { // Active Party Report
+      const finishReport = (alertMessage) => {
+        sessionStorage.setItem(`last_report_${partyId}`, NOW.toString());
+        alert(alertMessage);
+        document.getElementById('reportForm').reset();
+      };
+
+      if (statusType !== 'quiet') { // Active Party Report
         updates.status = 'ACTIVE PARTY';
         updates.quietReportsCount = 0; // Reset quiet counter on active report
-        alertMessage = `Status for "${party.name}" updated to ACTIVE PARTY!`;
+        partyRef.update(updates, (err) => {
+          if (!err) finishReport(`Status for "${party.name}" updated to ACTIVE PARTY!`);
+        });
+        return;
       }
 
-      if (headcountInput > 0) {
-        updates.crowdReportCount = (party.crowdReportCount || 0) + 1;
-        updates.crowdTotalSum = (party.crowdTotalSum || 0) + Math.min(headcountInput, 2000);
-      }
-
-      db.ref(`parties/${partyId}`).update(updates, (err) => {
-        if (!err) {
-          sessionStorage.setItem(`last_report_${partyId}`, NOW.toString());
-          alert(alertMessage);
-          document.getElementById('reportForm').reset();
+      // Quiet report: count atomically, then flip to QUIET once the 3rd report lands
+      partyRef.update(updates);
+      partyRef.child('quietReportsCount').transaction(current => toCount(current) + 1, (err, committed, snapshot) => {
+        if (err || !committed) return;
+        const quietCount = toCount(snapshot.val());
+        if (quietCount >= 3) {
+          partyRef.update({ status: 'QUIET', quietReportsCount: 0, lastUpdated: new Date().toISOString() }, (err2) => {
+            if (!err2) finishReport(`3 Quiet reports reached! "${party.name}" is now marked QUIET.`);
+          });
+        } else {
+          finishReport(`Report received (${quietCount}/3 required to mark quiet).`);
         }
       });
     }
@@ -954,9 +967,8 @@
       if (!party) return;
 
       const field = voteType === 'up' ? 'upvotes' : 'downvotes';
-      const currentVal = party[field] || 0;
 
-      db.ref(`parties/${partyId}/${field}`).set(currentVal + 1, (err) => {
+      db.ref(`parties/${partyId}/${field}`).set(firebase.database.ServerValue.increment(1), (err) => {
         if (!err) {
           sessionStorage.setItem(votedKey, voteType);
           alert(`Thanks for voting!`);
@@ -1178,7 +1190,7 @@
       mapMarkers.forEach(m => map.removeLayer(m));
       mapMarkers = [];
 
-      Object.values(partiesData).forEach(party => {
+      Object.entries(partiesData).forEach(([partyId, party]) => {
         const lat = party.lat || DEFAULT_LAT;
         const lng = party.lng || DEFAULT_LNG;
         const isParty = party.status === 'ACTIVE PARTY';
@@ -1195,11 +1207,11 @@
         marker.bindPopup(`
           <div style="color: #000; font-size: 12px;">
             <strong>${escapeHtml(party.name)}</strong><br>
-            Status: ${party.status}
+            Status: ${escapeHtml(party.status)}
           </div>
         `);
 
-        marker.on('click', () => openPartyDetailsModal(party.id));
+        marker.on('click', () => openPartyDetailsModal(partyId));
         mapMarkers.push(marker);
       });
     }
@@ -1349,7 +1361,8 @@
     function closeFeedbackModal() { document.getElementById('feedbackModal').classList.add('hidden'); }
 
     // Helpers & Utilities
-    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;") : ''; }
+    function toCount(val) { const n = Number(val); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; }
     function timeAgo(dateString) {
       if (!dateString) return 'just now';
       const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
@@ -1367,9 +1380,9 @@
     function populateDropdown() {
       const select = document.getElementById('reportPartySelect');
       select.innerHTML = '';
-      Object.values(partiesData).forEach(p => {
+      Object.entries(partiesData).forEach(([partyId, p]) => {
         const opt = document.createElement('option');
-        opt.value = p.id;
+        opt.value = partyId;
         opt.textContent = p.name;
         select.appendChild(opt);
       });
