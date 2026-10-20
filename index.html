@@ -19,7 +19,7 @@
   <div id="mapSelectBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-purple-900/90 text-white px-6 py-3 rounded-2xl shadow-2xl border border-purple-400 flex items-center gap-4 backdrop-blur-md">
     <div class="flex items-center gap-2 text-xs font-semibold">
       <i data-lucide="map-pin" class="w-4 h-4 text-pink-400 animate-bounce"></i>
-      Click anywhere within 1 mile of campus to select the party location
+      Click anywhere within 3 miles of campus to select the party location
     </div>
     <button onclick="cancelMapSelection()" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs">Cancel</button>
   </div>
@@ -99,7 +99,7 @@
           <p class="font-bold text-white mb-1">Map Legend</p>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Active Party</div>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500 inline-block"></span> Quiet Location</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-800 border border-gray-600 inline-block"></span> Outside 1-Mi Zone</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-800 border border-gray-600 inline-block"></span> Outside 3-Mi Zone</div>
         </div>
       </div>
     </div>
@@ -327,8 +327,8 @@
     // Slippery Rock PA Center Coordinates
     const DEFAULT_LAT = 41.0638;
     const DEFAULT_LNG = -80.0528;
-    const RADIUS_MILES = 1.0;
-    const RADIUS_METERS = RADIUS_MILES * 1609.34;
+    const RADIUS_MILES = 3.0; // Updated to 3 Miles
+    const RADIUS_METERS = RADIUS_MILES * 1609.34; // ~4828 meters
 
     // Realtime Database Sync
     db.ref('parties').on('value', (snapshot) => {
@@ -390,12 +390,13 @@
       });
     }
 
-    // Leaflet OpenStreetMap bounded to 1 Mile of Slippery Rock with Outside Greying Mask
+    // Leaflet OpenStreetMap bounded to 3 Miles of Slippery Rock with Outside Greying Mask
     function initMap() {
       if (map) return;
 
-      const latDelta = 0.016; 
-      const lngDelta = 0.021; 
+      // Expanded bounding box coordinates for 3-mile radius
+      const latDelta = 0.048; 
+      const lngDelta = 0.063; 
       const southWest = L.latLng(DEFAULT_LAT - latDelta, DEFAULT_LNG - lngDelta);
       const northEast = L.latLng(DEFAULT_LAT + latDelta, DEFAULT_LNG + lngDelta);
       const bounds = L.latLngBounds(southWest, northEast);
@@ -403,9 +404,9 @@
       map = L.map('campusMap', {
         maxBounds: bounds,
         maxBoundsViscosity: 0.9,
-        minZoom: 14,
+        minZoom: 13,
         maxZoom: 18
-      }).setView([DEFAULT_LAT, DEFAULT_LNG], 15);
+      }).setView([DEFAULT_LAT, DEFAULT_LNG], 14);
 
       const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -419,6 +420,7 @@
         [90, -180], [90, 180], [-90, 180], [-90, -180]
       ];
 
+      // Circular cutout hole for 3-mile radius zone
       const circlePoints = [];
       for (let i = 0; i <= 360; i += 5) {
         const rad = (i * Math.PI) / 180;
@@ -440,7 +442,7 @@
         
         const distMeters = map.distance(e.latlng, L.latLng(DEFAULT_LAT, DEFAULT_LNG));
         if (distMeters > RADIUS_METERS) {
-          alert('Please pick a location within 1 mile of Slippery Rock campus.');
+          alert('Please pick a location within 3 miles of Slippery Rock campus.');
           return;
         }
 
@@ -467,8 +469,8 @@
       mapMarkers = [];
 
       Object.values(partiesData).forEach(party => {
-        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.008;
-        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.008;
+        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.02;
+        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.02;
         const isParty = party.status === 'ACTIVE PARTY';
 
         const marker = L.circleMarker([lat, lng], {
