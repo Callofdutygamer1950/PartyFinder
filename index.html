@@ -381,6 +381,21 @@
       "permHeights": { id: "permHeights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490, crowdReportCount: 0, crowdTotalSum: 0 }
     };
 
+    // Slur and Profanity Filter List
+    const BLOCKED_WORDS = [
+      // Add custom slurs or profanity keywords here (lowercase)
+      "slur1", "slur2", "badword1", "badword2"
+    ];
+
+    function containsProfanity(text) {
+      const lowerText = text.toLowerCase();
+      // Clean up common leetspeak / character substitutions if needed
+      return BLOCKED_WORDS.some(word => {
+        const regex = new RegExp(`\\b${word}\\b`, 'i');
+        return regex.test(lowerText) || lowerText.includes(word);
+      });
+    }
+
     // Atomic Database Seed
     function seedPermanentLocations() {
       db.ref('parties').once('value', (snapshot) => {
@@ -595,7 +610,7 @@
       });
     }
 
-    // Multi-Comment Feed Logic (Unique messageId via .push())
+    // Multi-Comment Feed Logic with Slur Filter
     function handleModalCommentSubmit(e) {
       e.preventDefault();
       if (!selectedPartyId) return;
@@ -603,6 +618,12 @@
       const input = document.getElementById('modalCommentInput');
       const commentText = input.value.trim();
       if (!commentText) return;
+
+      // Check against blocked words / slurs
+      if (containsProfanity(commentText)) {
+        alert('Your comment contains prohibited language and cannot be posted.');
+        return;
+      }
 
       const newCommentRef = db.ref(`parties/${selectedPartyId}/comments`).push();
       const messageId = newCommentRef.key;
