@@ -430,9 +430,26 @@
     seedPermanentLocations();
 
     // Sync database & merge staple locations locally
+    // Sync database & merge staple locations cleanly
     db.ref('parties').on('value', (snapshot) => {
       const rawVal = snapshot.val() || {};
-      partiesData = { ...PERMANENT_LOCATIONS, ...rawVal };
+      
+      // Deep merge Firebase data over PERMANENT_LOCATIONS
+      partiesData = {};
+      
+      // First populate permanent defaults
+      Object.keys(PERMANENT_LOCATIONS).forEach(id => {
+        partiesData[id] = { ...PERMANENT_LOCATIONS[id] };
+      });
+
+      // Override with live database entries
+      Object.keys(rawVal).forEach(id => {
+        partiesData[id] = {
+          ...(partiesData[id] || {}),
+          ...rawVal[id]
+        };
+      });
+
       renderUI();
       renderAdminLocationsList();
     });
