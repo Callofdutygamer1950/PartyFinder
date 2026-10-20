@@ -184,10 +184,10 @@
       <div class="flex items-center justify-between bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 mb-4">
         <span class="text-xs font-medium text-gray-300">Rate this Location:</span>
         <div class="flex items-center gap-3" id="modalVotingContainer">
-          <button onclick="castPartyVote(selectedPartyId, 'up')" class="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+          <button id="modalUpvoteBtn" onclick="castPartyVote(selectedPartyId, 'up')" class="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
             <i data-lucide="thumbs-up" class="w-3.5 h-3.5"></i> <span id="modalUpvoteCount">0</span>
           </button>
-          <button onclick="castPartyVote(selectedPartyId, 'down')" class="px-3 py-1 bg-red-950/60 hover:bg-red-900/80 border border-red-500/30 text-red-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+          <button id="modalDownvoteBtn" onclick="castPartyVote(selectedPartyId, 'down')" class="px-3 py-1 bg-red-950/60 hover:bg-red-900/80 border border-red-500/30 text-red-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
             <i data-lucide="thumbs-down" class="w-3.5 h-3.5"></i> <span id="modalDownvoteCount">0</span>
           </button>
         </div>
@@ -548,6 +548,7 @@
 
       renderUI();
       renderAdminLocationsList();
+      updateModalVoteUI();
     });
 
     // Listen for incoming party proposals (admins only; attached on sign-in)
@@ -589,6 +590,7 @@
         const upvotes = toCount(party.upvotes);
         const downvotes = toCount(party.downvotes);
         const quietCount = toCount(party.quietReportsCount);
+        const myVote = getMyVote(partyId);
 
         const card = document.createElement('div');
         card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 cursor-pointer transition`;
@@ -615,10 +617,10 @@
           <!-- Upvote / Downvote Inline Bar -->
           <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-2 text-xs">
             <div class="flex items-center gap-2">
-              <button class="js-vote-up "px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+              <button class="js-vote-up ${myVote === 'up' ? 'ring-2 ring-emerald-400' : ''} px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                 👍 <span>${upvotes}</span>
               </button>
-              <button class="js-vote-down "px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+              <button class="js-vote-down ${myVote === 'down' ? 'ring-2 ring-red-400' : ''} px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                 👎 <span>${downvotes}</span>
               </button>
             </div>
@@ -652,8 +654,8 @@
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button class="js-edit "px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
-            <button class="js-delete "px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
+            <button class="js-edit px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
+            <button class="js-delete px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
         item.querySelector('.js-edit').addEventListener('click', () => openAdminEditLocationModal(partyId));
@@ -682,8 +684,8 @@
             <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.submittedAt)}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button class="js-approve "px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg font-semibold transition">Approve</button>
-            <button class="js-reject "px-2.5 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded-lg font-semibold transition">Reject</button>
+            <button class="js-approve px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg font-semibold transition">Approve</button>
+            <button class="js-reject px-2.5 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded-lg font-semibold transition">Reject</button>
           </div>
         `;
         item.querySelector('.js-approve').addEventListener('click', () => approveProposal(propId));
@@ -920,27 +922,49 @@
       });
     }
 
-    // Upvote / Downvote Function (1 vote per session per party)
+    // Upvote / Downvote: one vote per party per browser; picking the other option switches the vote
+    function getMyVote(partyId) {
+      return localStorage.getItem(`vote_${partyId}`) || sessionStorage.getItem(`voted_${partyId}`);
+    }
+
     function castPartyVote(partyId, voteType) {
-      if (!partyId) return;
-
-      const votedKey = `voted_${partyId}`;
-      if (sessionStorage.getItem(votedKey)) {
-        alert("You have already voted on this location for this session!");
-        return;
-      }
-
       const party = partiesData[partyId];
       if (!party) return;
 
-      const field = voteType === 'up' ? 'upvotes' : 'downvotes';
+      const previous = getMyVote(partyId);
+      if (previous === voteType) return;
 
-      db.ref(`parties/${partyId}/${field}`).set(firebase.database.ServerValue.increment(1), (err) => {
-        if (!err) {
-          sessionStorage.setItem(votedKey, voteType);
-          alert(`Thanks for voting!`);
+      const field = voteType === 'up' ? 'upvotes' : 'downvotes';
+      const updates = { [field]: firebase.database.ServerValue.increment(1) };
+      if (previous) {
+        const prevField = previous === 'up' ? 'upvotes' : 'downvotes';
+        if (toCount(party[prevField]) > 0) updates[prevField] = firebase.database.ServerValue.increment(-1);
+      }
+
+      // Save the choice first so the re-render triggered by this write shows it highlighted
+      localStorage.setItem(`vote_${partyId}`, voteType);
+      sessionStorage.removeItem(`voted_${partyId}`);
+      db.ref(`parties/${partyId}`).update(updates, (err) => {
+        if (err) {
+          if (previous) localStorage.setItem(`vote_${partyId}`, previous);
+          else localStorage.removeItem(`vote_${partyId}`);
+          renderUI();
+          updateModalVoteUI();
+          alert('Vote failed: ' + err.message);
         }
       });
+    }
+
+    function updateModalVoteUI() {
+      const party = selectedPartyId && partiesData[selectedPartyId];
+      if (!party) return;
+      const myVote = getMyVote(selectedPartyId);
+      document.getElementById('modalUpvoteCount').textContent = toCount(party.upvotes);
+      document.getElementById('modalDownvoteCount').textContent = toCount(party.downvotes);
+      document.getElementById('modalUpvoteBtn').classList.toggle('ring-2', myVote === 'up');
+      document.getElementById('modalUpvoteBtn').classList.toggle('ring-emerald-400', myVote === 'up');
+      document.getElementById('modalDownvoteBtn').classList.toggle('ring-2', myVote === 'down');
+      document.getElementById('modalDownvoteBtn').classList.toggle('ring-red-400', myVote === 'down');
     }
 
     // Party Subscription Toggle (Browser Notifications)
@@ -1043,8 +1067,7 @@
 
       document.getElementById('modalPartyTitle').textContent = party.name;
       document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
-      document.getElementById('modalUpvoteCount').textContent = party.upvotes || 0;
-      document.getElementById('modalDownvoteCount').textContent = party.downvotes || 0;
+      updateModalVoteUI();
 
       updateSubscriptionButtonUI();
 
