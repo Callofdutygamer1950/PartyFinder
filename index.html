@@ -113,7 +113,7 @@
             </label>
             <label class="border border-gray-700 bg-gray-800/50 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-gray-500 transition">
               <input type="radio" name="statusType" value="quiet" required class="text-purple-600 focus:ring-0">
-              <span class="text-xs font-semibold text-gray-400">🤫 Quiet / No Party</span>
+              <span class="text-xs font-semibold text-gray-400">🤫 Quiet / No Party (Requires 3 reports)</span>
             </label>
           </div>
         </div>
@@ -162,7 +162,7 @@
     </div>
   </footer>
 
-  <!-- Party Details Modal with Multi-Comment Feed -->
+  <!-- Party Details Modal with Multi-Comment Feed & Subscribe Feature -->
   <div id="partyDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
       <div class="flex justify-between items-start border-b border-gray-800 pb-4 mb-4">
@@ -170,7 +170,27 @@
           <h2 id="modalPartyTitle" class="text-lg font-bold text-white">Party Name</h2>
           <p id="modalPartyLocation" class="text-xs text-gray-400">Location</p>
         </div>
-        <button onclick="closePartyDetailsModal()" class="text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
+        <div class="flex items-center gap-2">
+          <!-- Restored Subscribe Toggle Button -->
+          <button id="modalSubscribeBtn" onclick="togglePartySubscription()" class="px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+            <span id="modalSubscribeText">Subscribe</span>
+          </button>
+          <button onclick="closePartyDetailsModal()" class="text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
+        </div>
+      </div>
+
+      <!-- Live Voting Bar Inside Modal -->
+      <div class="flex items-center justify-between bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 mb-4">
+        <span class="text-xs font-medium text-gray-300">Rate this Location:</span>
+        <div class="flex items-center gap-3" id="modalVotingContainer">
+          <button onclick="castPartyVote(selectedPartyId, 'up')" class="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+            <i data-lucide="thumbs-up" class="w-3.5 h-3.5"></i> <span id="modalUpvoteCount">0</span>
+          </button>
+          <button onclick="castPartyVote(selectedPartyId, 'down')" class="px-3 py-1 bg-red-950/60 hover:bg-red-900/80 border border-red-500/30 text-red-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
+            <i data-lucide="thumbs-down" class="w-3.5 h-3.5"></i> <span id="modalDownvoteCount">0</span>
+          </button>
+        </div>
       </div>
 
       <div class="flex-grow overflow-y-auto space-y-4 pr-1">
@@ -371,10 +391,10 @@
           <input type="text" id="editPartyLocation" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Status Override</label>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Admin Status Override</label>
           <select id="editPartyStatus" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
             <option value="ACTIVE PARTY">🎉 ACTIVE PARTY</option>
-            <option value="QUIET">🤫 QUIET</option>
+            <option value="QUIET">🤫 QUIET (Immediate Admin Override)</option>
           </select>
         </div>
         <div class="grid grid-cols-2 gap-2">
@@ -449,6 +469,9 @@
     let isSelectingLocation = false;
     let mapMarkers = [];
     let currentAdminUser = null;
+
+    // Subscriptions stored locally in browser
+    let subscribedPartyIds = JSON.parse(localStorage.getItem('subscribedPartyIds') || '[]');
 
     // Slippery Rock Coordinates & 3-Mile Geofence
     const DEFAULT_LAT = 41.0638;
@@ -526,9 +549,24 @@
       document.getElementById('hostModal').classList.remove('hidden');
     }
 
-    // Direct Firebase database listener for parties
+    // Direct Firebase database listener for parties with Browser Notifications
     db.ref('parties').on('value', (snapshot) => {
+      const oldData = partiesData;
       partiesData = snapshot.val() || {};
+
+      // Trigger notification if a subscribed party changes status
+      Object.values(partiesData).forEach(newParty => {
+        const prevParty = oldData[newParty.id];
+        if (prevParty && subscribedPartyIds.includes(newParty.id)) {
+          if (prevParty.status !== newParty.status) {
+            triggerBrowserNotification(
+              `Party Update: ${newParty.name}`,
+              `Status changed to ${newParty.status}!`
+            );
+          }
+        }
+      });
+
       renderUI();
       renderAdminLocationsList();
     });
@@ -570,13 +608,15 @@
         const isParty = party.status === 'ACTIVE PARTY';
         const totalReports = party.crowdReportCount || 0;
         const avgCrowd = Math.min(totalReports > 0 ? Math.round((party.crowdTotalSum || 0) / totalReports) : 0, 2000);
+        const upvotes = party.upvotes || 0;
+        const downvotes = party.downvotes || 0;
+        const quietCount = party.quietReportsCount || 0;
 
         const card = document.createElement('div');
         card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 cursor-pointer transition`;
-        card.onclick = () => openPartyDetailsModal(party.id);
-
+        
         card.innerHTML = `
-          <div>
+          <div onclick="openPartyDetailsModal('${party.id}')">
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
@@ -585,19 +625,31 @@
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${party.status}</span>
             </div>
             ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
-            <div class="flex items-center gap-4 text-xs text-gray-400">
+            
+            <div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
               <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>
               <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdated)}</span>
             </div>
+
+            ${quietCount > 0 && quietCount < 3 ? `<p class="text-[10px] text-amber-400 font-medium mb-2">🤫 Quiet Reports: ${quietCount}/3 required</p>` : ''}
           </div>
-          <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-4 text-xs text-purple-400 font-semibold">
-            <span>View Details & Comments →</span>
+
+          <!-- Upvote / Downvote Inline Bar -->
+          <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-2 text-xs">
+            <div class="flex items-center gap-2">
+              <button onclick="event.stopPropagation(); castPartyVote('${party.id}', 'up')" class="px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                👍 <span>${upvotes}</span>
+              </button>
+              <button onclick="event.stopPropagation(); castPartyVote('${party.id}', 'down')" class="px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                👎 <span>${downvotes}</span>
+              </button>
+            </div>
+            <span onclick="openPartyDetailsModal('${party.id}')" class="text-purple-400 font-semibold text-xs hover:underline">Details & Comments →</span>
           </div>
         `;
         grid.appendChild(card);
       });
 
-      // Filter grid items if search query is actively present
       filterParties();
     }
 
@@ -619,7 +671,7 @@
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openAdminEditLocationModal('${party.id}')" class="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit</button>
+            <button onclick="openAdminEditLocationModal('${party.id}')" class="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
             <button onclick="handleAdminDeleteLocation('${party.id}')" class="px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
@@ -738,6 +790,9 @@
           isPermanent: false,
           crowdReportCount: 0,
           crowdTotalSum: 0,
+          quietReportsCount: 0,
+          upvotes: 0,
+          downvotes: 0,
           lastUpdated: new Date().toISOString()
         };
 
@@ -790,15 +845,17 @@
       e.preventDefault();
       const id = document.getElementById('editPartyId').value || `party_${Date.now()}`;
       const existing = partiesData[id] || {};
+      const newStatus = document.getElementById('editPartyStatus').value;
 
       const updated = {
         id: id,
         name: document.getElementById('editPartyName').value.trim(),
         location: document.getElementById('editPartyLocation').value.trim(),
-        status: document.getElementById('editPartyStatus').value,
+        status: newStatus,
         lat: parseFloat(document.getElementById('editPartyLat').value) || DEFAULT_LAT,
         lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
         isPermanent: existing.isPermanent || false,
+        quietReportsCount: newStatus === 'QUIET' ? 0 : (existing.quietReportsCount || 0),
         lastUpdated: new Date().toISOString()
       };
 
@@ -826,7 +883,7 @@
       });
     }
 
-    // Status Report Handler
+    // Status Report Handler with 1-Hour Cooldown & 3-Quiet-Reports Rule
     function handleStatusSubmit(e) {
       e.preventDefault();
       const partyId = document.getElementById('reportPartySelect').value;
@@ -836,26 +893,132 @@
       const party = partiesData[partyId];
       if (!party) return;
 
-      const newStatus = statusType === 'party' ? 'ACTIVE PARTY' : 'QUIET';
-      const currentReports = party.crowdReportCount || 0;
-      const currentSum = party.crowdTotalSum || 0;
+      // Rate Limit Check: 1 vote/report per session per hour
+      const lastReportTime = sessionStorage.getItem(`last_report_${partyId}`);
+      const NOW = Date.now();
+      const ONE_HOUR = 60 * 60 * 1000;
+
+      if (lastReportTime && (NOW - parseInt(lastReportTime)) < ONE_HOUR) {
+        const remainingMinutes = Math.ceil((ONE_HOUR - (NOW - parseInt(lastReportTime))) / (60 * 1000));
+        alert(`Rate Limit: You have already submitted a status update for "${party.name}". Please wait ${remainingMinutes} minute(s) before updating again.`);
+        return;
+      }
 
       const updates = {
-        status: newStatus,
         lastUpdated: new Date().toISOString()
       };
 
+      let alertMessage = "";
+
+      if (statusType === 'quiet') {
+        const currentQuiet = (party.quietReportsCount || 0) + 1;
+        if (currentQuiet >= 3) {
+          updates.status = 'QUIET';
+          updates.quietReportsCount = 0;
+          alertMessage = `3 Quiet reports reached! "${party.name}" is now marked QUIET.`;
+        } else {
+          updates.quietReportsCount = currentQuiet;
+          alertMessage = `Report received (${currentQuiet}/3 required to mark quiet).`;
+        }
+      } else { // Active Party Report
+        updates.status = 'ACTIVE PARTY';
+        updates.quietReportsCount = 0; // Reset quiet counter on active report
+        alertMessage = `Status for "${party.name}" updated to ACTIVE PARTY!`;
+      }
+
       if (headcountInput > 0) {
-        updates.crowdReportCount = currentReports + 1;
-        updates.crowdTotalSum = currentSum + Math.min(headcountInput, 2000);
+        updates.crowdReportCount = (party.crowdReportCount || 0) + 1;
+        updates.crowdTotalSum = (party.crowdTotalSum || 0) + Math.min(headcountInput, 2000);
       }
 
       db.ref(`parties/${partyId}`).update(updates, (err) => {
         if (!err) {
-          alert(`Status for "${party.name}" updated to ${newStatus}!`);
+          sessionStorage.setItem(`last_report_${partyId}`, NOW.toString());
+          alert(alertMessage);
           document.getElementById('reportForm').reset();
         }
       });
+    }
+
+    // Upvote / Downvote Function (1 vote per session per party)
+    function castPartyVote(partyId, voteType) {
+      if (!partyId) return;
+
+      const votedKey = `voted_${partyId}`;
+      if (sessionStorage.getItem(votedKey)) {
+        alert("You have already voted on this location for this session!");
+        return;
+      }
+
+      const party = partiesData[partyId];
+      if (!party) return;
+
+      const field = voteType === 'up' ? 'upvotes' : 'downvotes';
+      const currentVal = party[field] || 0;
+
+      db.ref(`parties/${partyId}/${field}`).set(currentVal + 1, (err) => {
+        if (!err) {
+          sessionStorage.setItem(votedKey, voteType);
+          alert(`Thanks for voting!`);
+        }
+      });
+    }
+
+    // Party Subscription Toggle (Browser Notifications)
+    function togglePartySubscription() {
+      if (!selectedPartyId) return;
+
+      if (!("Notification" in window)) {
+        alert("Browser notifications are not supported in your browser.");
+        return;
+      }
+
+      if (Notification.permission !== "granted") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            processSubscriptionToggle();
+          } else {
+            alert("Notification permission was denied. Enable site notifications in browser settings to receive party alerts.");
+          }
+        });
+      } else {
+        processSubscriptionToggle();
+      }
+    }
+
+    function processSubscriptionToggle() {
+      const index = subscribedPartyIds.indexOf(selectedPartyId);
+      if (index > -1) {
+        subscribedPartyIds.splice(index, 1);
+        alert("Unsubscribed from party updates for this location.");
+      } else {
+        subscribedPartyIds.push(selectedPartyId);
+        alert("Subscribed! You will receive live browser notifications when this party status changes.");
+      }
+
+      localStorage.setItem('subscribedPartyIds', JSON.stringify(subscribedPartyIds));
+      updateSubscriptionButtonUI();
+    }
+
+    function updateSubscriptionButtonUI() {
+      const btn = document.getElementById('modalSubscribeBtn');
+      const text = document.getElementById('modalSubscribeText');
+      if (!btn || !selectedPartyId) return;
+
+      const isSubbed = subscribedPartyIds.includes(selectedPartyId);
+      if (isSubbed) {
+        btn.className = "px-3 py-1.5 rounded-xl bg-purple-600 text-white border border-purple-400 text-xs font-semibold flex items-center gap-1.5 transition";
+        text.textContent = "Subscribed";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-xl bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 text-xs font-semibold flex items-center gap-1.5 transition";
+        text.textContent = "Subscribe";
+      }
+    }
+
+    function triggerBrowserNotification(title, body) {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body: body, icon: 'https://unpkg.com/lucide-static@0.321.0/icons/radio.svg' });
+      }
     }
 
     // Multi-Comment Feed Logic with Slur Filter
@@ -901,6 +1064,10 @@
 
       document.getElementById('modalPartyTitle').textContent = party.name;
       document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
+      document.getElementById('modalUpvoteCount').textContent = party.upvotes || 0;
+      document.getElementById('modalDownvoteCount').textContent = party.downvotes || 0;
+
+      updateSubscriptionButtonUI();
 
       db.ref(`parties/${partyId}/comments`).on('value', (snapshot) => {
         const commentsContainer = document.getElementById('modalCommentContainer');
