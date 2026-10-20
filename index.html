@@ -420,16 +420,9 @@
     const RADIUS_MILES = 3.0;
     const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
-    // Permanent Staple Locations
-    const PERMANENT_LOCATIONS = {
-      "permGrove": { id: "permGrove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540, crowdReportCount: 0, crowdTotalSum: 0 },
-      "permIvy": { id: "permIvy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510, crowdReportCount: 0, crowdTotalSum: 0 },
-      "permHeights": { id: "permHeights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490, crowdReportCount: 0, crowdTotalSum: 0 }
-    };
-
     // Slur and Profanity Filter List
     const BLOCKED_WORDS = [
-      "aperest", "coondog", "dogfucker", "Dothead", "Oreo", "assjockey", "cuntlicker", "kunt", "shithead", "anilingus", "asslick", "bulldyke", "Camel-Jockey", "Ching-Chong", "dickless", "fatso", "fudgepacker", "he-she", "niggaracci", "phuk", "Towel-head", "white-negro", "niggerous", "Bluegum", "fag", "shitskinned", "asswhore", "tard", "zipperhead", "Cracker", "Jewish-lightning", "asslicker", "cocksmoker", "cocksucker", "crippled", "cumfest", "cuntsucker", "doggystyle", "farm-nigger", "honkers", "Northern-Monkey", "poon", "titfuck", "sweat-like-a-nigger", "Christfag", "cuntboy", "Niggerian", "niggerbitch", "niggerboy", "niggercide", "niggerdick", "shitskin", "twat", "Chink", "cumskin", "fuuck", "niggerosity", "niggerjew", "anal", "antinigger", "Arabush", "Buddhahead", "Democunt", "dike", "Golliwog", "homobangers", "Indognesial", "Mexicoon", "phuking", "phukking", "asspirate", "felatio", "transgenderedness", "Porch-monkey", "shitnigger", "rape", "culture", "arabs", "bastard", "blindie", "bulldike", "butchdike", "camelfucker", "Chinaman", "cumshot", "dripdick", "fag-mag", "gatorbait", "hitlerism", "Jew-down", "Jewnited-Snakes", "Jewy", "leftover", "mentally-retarded", "midget", "nigga-please", "Nigger-toe", "niggeration", "niggerette", "niggerphile", "niggerspeak", "nizzle", "Prairie-nigger", "randy", "she-he", "shemale", "slam-pig", "snigger", "spaz", "Spearchucker", "white-nigger", "yellow-nigger", "zhidovka", "stfu", "nigger-rigged", "Africoon-Americoon", "Jigaboo", "kyke", "niggerdom", "assfuck", "assklown", "balllicker", "Jewfucker", "jiggabo", "nigfant", "niggergram", "porchmonkey", "Sand-nigger", "yard-ape", "queer", "asspuppies", "black-trash", "blackman", "fatass", "fucktardedly", "jism", "niggling", "nigglings", "Paki", "shitface", "titfucker", "Turd-World", "twobitwhore", "willy", "niggerfuck", "sixtynine", "ABCD", "China-doll", "coon", "Curry-muncher", "fuckwhore", "pussy", "trap", "Christcuck", "fatfuck", "Oriental", "niggerhead", "assfucker", "asshole", "asshore", "Aunt-Jemima", "bastardess", "beaner", "bitching", "boobs", "butt-fuck", "buttpirate", "Chernozhopy", "choad", "Citations:niggerdick", "cockblock", "cockfight", "cooter", "dick", "dickhead", "douchebag", "dumbass", "Dune-coon", "dyke", "fuckity-bye", "Gypsy", "lactate", "lesbo", "Malingsialan", "negroid", "niggerization", "niggerskin", "Piefke", "sandnigger", "slutt", "snownigger", "timbernigger", "transgendered", "troon", "Uncle-Tom", "Zhyd", "Zionazi"
+      "aperest", "coondog", "dogfucker", "Dothead", "Oreo", "assjockey", "cuntlicker", "kunt", "shithead", "anilingus", "asslick", "bulldyke", "Camel-Jockey", "Ching-Chong", "dickless", "fatso", "fudgepacker", "he-she", "niggaracci", "phuk", "Towel-head", "white-negro", "niggerous", "Bluegum", "fag", "shitskinned", "asswhore", "tard", "zipperhead", "Cracker", "Jewish-lightning", "asslicker", "cocksmoker", "cocksucker", "crippled", "cumfest", "cuntsucker", "doggystyle", "farm-nigger", "honkers", "Northern-Monkey", "poon", "titfuck", "sweat-like-a-nigger", "Christfag", "cuntboy", "Niggerian", "niggerbitch", "niggerboy", "niggercide", "niggerdick", "shitskin", "twat", "Chink", "cumskin", "fuuck", "niggerosity", "niggerjew", "anal", "antinigger", "Arabush", "Buddhahead", "Democunt", "dike", "Golliwog", "homobangers", "Indognesial", "Mexicoon", "phuking", "phukking", "asspirate", "felatio", "transgenderedness", "Porch-monkey", "shitnigger", "rape", "culture", "arabs", "bastard", "blindie", "bulldike", "butchdike", "camelfucker", "Chinaman", "cumshot", "dripdick", "fag-mag", "gatorbait", "hitlerism", "Jew-down", "Jewnited-Snakes", "Jewy", "leftover", "mentally-retarded", "midget", "nigga-please", "Nigger-toe", "niggeration", "niggerette", "niggerphile", "niggerspeak", "nizzle", "Prairie-nigger", "randy", "she-he", "shemale", "slam-pig", "snigger", "spaz", "Spearchucker", "white-nigger", "yellow-nigger", "zhidovka", "stfu", "nigger-rigged", "Africoon-Americoon", "Jigaboo", "kyke", "niggerdom", "assfuck", "assklown", "balllicker", "Jewfucker", "jiggabo", "nigfant", "niggergram", "porchmonkey", "Sand-nigger", "yard-ape", "queer", "asspuppies", "black-trash", "blackman", "fatass", "fucktardedly", "jism", "niggling", "nigglings", "Paki", "shitface", "titfucker", "Turd-World", "twobitwhore", "willy", "niggerfuck", "sixtynine", "ABCD", "China-doll", "coon", "Curry-muncher", "fuckwhore", "pussy", "trap", "Christcuck", "fatfuck", "Oriental", "niggerhead", "assfucker", "asshole", "asshore", "Aunt-Jemima", "bastardess", "beaner", "bitching", "boobs", "butt-fuck", "buttpirate", "Chernozhopy", "choad", "Citations:niggerdick", "cockblock", "cockfight", "cooter", "dick", "dickhead", "douchebag", "dumbass", "Dune-coon", "dyke", "fuckity-bye", "Gypsy", "lactate", "lesbo", "Malingsialan", "negroid", "niggerization", "niggerskin", "Piefke", "sandnigger", "slutt", "snownigger", "timbernigger", "transgendered", "troon", "Uncle-Tom", "Zhyd", "Zionazi", "nigga", "nigger"
     ];
 
     function containsProfanity(text) {
@@ -497,47 +490,9 @@
       document.getElementById('hostModal').classList.remove('hidden');
     }
 
-    // Atomic Database Seed
-    function seedPermanentLocations() {
-      db.ref('parties').once('value', (snapshot) => {
-        const val = snapshot.val() || {};
-        const updates = {};
-        let needsUpdate = false;
-
-        Object.keys(PERMANENT_LOCATIONS).forEach(id => {
-          if (!val[id]) {
-            updates[`parties/${id}`] = {
-              ...PERMANENT_LOCATIONS[id],
-              lastUpdated: new Date().toISOString()
-            };
-            needsUpdate = true;
-          }
-        });
-
-        if (needsUpdate) {
-          db.ref().update(updates);
-        }
-      });
-    }
-
-    seedPermanentLocations();
-
-    // Deep merge live Firebase data over PERMANENT_LOCATIONS
+    // Direct Firebase database listener for parties
     db.ref('parties').on('value', (snapshot) => {
-      const rawVal = snapshot.val() || {};
-      
-      partiesData = {};
-      Object.keys(PERMANENT_LOCATIONS).forEach(id => {
-        partiesData[id] = { ...PERMANENT_LOCATIONS[id] };
-      });
-
-      Object.keys(rawVal).forEach(id => {
-        partiesData[id] = {
-          ...(partiesData[id] || {}),
-          ...rawVal[id]
-        };
-      });
-
+      partiesData = snapshot.val() || {};
       renderUI();
       renderAdminLocationsList();
     });
@@ -605,6 +560,9 @@
         `;
         grid.appendChild(card);
       });
+
+      // Filter grid items if search query is actively present
+      filterParties();
     }
 
     function renderAdminLocationsList() {
@@ -626,7 +584,7 @@
           </div>
           <div class="flex items-center gap-2">
             <button onclick="openAdminEditLocationModal('${party.id}')" class="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit</button>
-            ${!party.isPermanent ? `<button onclick="handleAdminDeleteLocation('${party.id}')" class="px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>` : ''}
+            <button onclick="handleAdminDeleteLocation('${party.id}')" class="px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
         container.appendChild(item);
@@ -663,6 +621,18 @@
       if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
       }
+    }
+
+    function filterParties() {
+      const searchInput = document.getElementById('searchInput');
+      if (!searchInput) return;
+      const query = searchInput.value.toLowerCase().trim();
+      const cards = document.querySelectorAll('#partiesGrid > div');
+      
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? '' : 'none';
+      });
     }
 
     // Party Proposal Actions
@@ -795,11 +765,7 @@
 
     function handleAdminDeleteLocation(partyId) {
       const party = partiesData[partyId];
-      if (party && party.isPermanent) {
-        alert('Permanent staple locations cannot be deleted.');
-        return;
-      }
-      if (confirm(`Are you sure you want to delete "${party.name}"?`)) {
+      if (confirm(`Are you sure you want to delete "${party ? party.name : 'this location'}"?`)) {
         db.ref(`parties/${partyId}`).remove();
       }
     }
