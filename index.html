@@ -15,7 +15,7 @@
   <!-- Leaflet Heatmap Plugin -->
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col justify-between pb-20">
+<body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col justify-between">
 
   <!-- Map Selection Banner (Hidden by default) -->
   <div id="mapSelectBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-purple-900/90 text-white px-6 py-3 rounded-2xl shadow-2xl border border-purple-400 flex items-center gap-4 backdrop-blur-md">
@@ -130,32 +130,37 @@
     </section>
   </main>
 
-  <footer class="border-t border-gray-900 py-6 text-center text-xs text-gray-500 mb-12">
-    Drop the Addy &copy; 2026. Real-time updates synced via Firebase.
-  </footer>
+  <!-- Integrated Footer Section -->
+  <footer class="border-t border-gray-900 py-8 px-4 bg-gray-900/40 mt-12">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <!-- Action Buttons Area Inside Footer -->
+      <div class="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
+        <!-- Dynamic Feedback Button -->
+        <button onclick="openFeedbackModal()" id="headerFeedbackBtn" class="px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center gap-1.5 transition">
+          <i data-lucide="lightbulb" id="headerFeedbackIcon" class="w-3.5 h-3.5"></i>
+          <span id="headerFeedbackTitle">Request Feature</span>
+        </button>
 
-  <!-- Fixed Bottom Action Bar -->
-  <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 border-t border-gray-800 backdrop-blur-md z-40 py-2.5 px-4">
-    <div class="max-w-xl mx-auto flex items-center justify-between gap-2">
-      <!-- Dynamic Feedback Button -->
-      <button onclick="openFeedbackModal()" id="headerFeedbackBtn" class="flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center justify-center gap-1.5 transition">
-        <i data-lucide="lightbulb" id="headerFeedbackIcon" class="w-3.5 h-3.5"></i>
-        <span id="headerFeedbackTitle">Request Feature</span>
-      </button>
+        <!-- iOS Support Button -->
+        <button onclick="openDonateModal()" class="px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-xl flex items-center gap-1.5 transition shadow-sm">
+          <i data-lucide="heart" class="w-3.5 h-3.5 text-pink-400 fill-pink-400/20"></i>
+          <span>Support iOS App</span>
+        </button>
 
-      <!-- iOS Support Button -->
-      <button onclick="openDonateModal()" class="flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
-        <i data-lucide="heart" class="w-3.5 h-3.5 text-pink-400 fill-pink-400/20"></i>
-        <span>Support iOS App</span>
-      </button>
+        <!-- Host Authentication / Panel Button -->
+        <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
+          <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
+          <span id="adminNavText">Host Login</span>
+        </button>
+      </div>
 
-      <!-- Host Authentication / Panel Button -->
-      <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="flex-1 py-2 px-3 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-1.5 transition">
-        <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
-        <span id="adminNavText">Host Login</span>
-      </button>
+      <!-- Copyright Statement -->
+      <p class="text-xs text-gray-500 text-center md:text-right">
+        Drop the Addy &copy; 2026. Real-time updates synced via Firebase.
+      </p>
     </div>
-  </div>
+  </footer>
 
   <!-- Party Details Modal with Multi-Comment Feed -->
   <div id="partyDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
@@ -400,7 +405,7 @@
     const firebaseConfig = {
       apiKey: "__FIREBASE_API_KEY__",
       authDomain: "__FIREBASE_AUTH_DOMAIN__",
-      databaseURL: "__FIREBASE_DATABASE_URL__",
+      databaseURL: "https://party-finder-a2983-default-rtdb.firebaseio.com",
       projectId: "__FIREBASE_PROJECT_ID__",
       storageBucket: "__FIREBASE_STORAGE_BUCKET__",
       messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
@@ -956,7 +961,7 @@
       osmLayer.getContainer().style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
 
       const outerWorld = [
-        [90, -180], [90, 180], [-90, 180], [-90, -180]
+        [90, -180], [90, 180], [-90, -180], [-90, -180]
       ];
 
       const circlePoints = [];
@@ -1123,7 +1128,7 @@
       if (type === 'BUG') {
         headerTitle.textContent = "Report Bug";
         headerIcon.setAttribute('data-lucide', 'bug');
-        headerBtn.className = "flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-xl flex items-center justify-center gap-1.5 transition";
+        headerBtn.className = "px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-xl flex items-center gap-1.5 transition";
 
         modalTitle.textContent = "Report Bug";
         modalIconBox.className = "bg-red-500/20 p-2 rounded-xl text-red-400";
@@ -1135,7 +1140,7 @@
       } else {
         headerTitle.textContent = "Request Feature";
         headerIcon.setAttribute('data-lucide', 'lightbulb');
-        headerBtn.className = "flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center justify-center gap-1.5 transition";
+        headerBtn.className = "px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center gap-1.5 transition";
 
         modalTitle.textContent = "Request Feature";
         modalIconBox.className = "bg-amber-500/20 p-2 rounded-xl text-amber-400";
