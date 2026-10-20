@@ -15,7 +15,7 @@
   <!-- Leaflet Heatmap Plugin -->
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col justify-between">
+<body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col justify-between pb-20">
 
   <!-- Map Selection Banner (Hidden by default) -->
   <div id="mapSelectBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-purple-900/90 text-white px-6 py-3 rounded-2xl shadow-2xl border border-purple-400 flex items-center gap-4 backdrop-blur-md">
@@ -40,9 +40,10 @@
           <p class="text-xs text-gray-400">Anonymous Party Tracker</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 flex-wrap">
+
+      <div class="flex items-center gap-2">
         <!-- View Toggle Buttons -->
-        <div class="bg-gray-800/80 p-1 rounded-lg border border-gray-700 flex gap-1 mr-2">
+        <div class="bg-gray-800/80 p-1 rounded-lg border border-gray-700 flex gap-1">
           <button onclick="switchView('grid')" id="viewGridBtn" class="px-2.5 py-1 text-xs rounded-md font-semibold bg-purple-600 text-white transition flex items-center gap-1">
             <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Grid
           </button>
@@ -51,26 +52,9 @@
           </button>
         </div>
 
-        <!-- Dynamic Feedback Button -->
-        <button onclick="openFeedbackModal()" id="headerFeedbackBtn" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition">
-          <i data-lucide="lightbulb" id="headerFeedbackIcon" class="w-3.5 h-3.5"></i>
-          <span id="headerFeedbackTitle">Request Feature</span>
-        </button>
-
-        <button onclick="openDonateModal()" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-lg flex items-center gap-1.5 transition shadow-sm">
-          <i data-lucide="heart" class="w-3.5 h-3.5 text-pink-400 fill-pink-400/20"></i>
-          <span class="hidden sm:inline">Support</span> iOS App
-        </button>
-
         <button onclick="openProposeModal()" class="px-3 py-2 text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-lg flex items-center gap-1.5 transition">
           <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-purple-400"></i>
           Propose Party
-        </button>
-
-        <!-- Dynamic Admin Action Button (Host Login vs Host Panel) -->
-        <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
-          <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
-          <span id="adminNavText">Host Login</span>
         </button>
       </div>
     </div>
@@ -146,9 +130,32 @@
     </section>
   </main>
 
-  <footer class="border-t border-gray-900 py-6 text-center text-xs text-gray-500">
+  <footer class="border-t border-gray-900 py-6 text-center text-xs text-gray-500 mb-12">
     Drop the Addy &copy; 2026. Real-time updates synced via Firebase.
   </footer>
+
+  <!-- Fixed Bottom Action Bar -->
+  <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 border-t border-gray-800 backdrop-blur-md z-40 py-2.5 px-4">
+    <div class="max-w-xl mx-auto flex items-center justify-between gap-2">
+      <!-- Dynamic Feedback Button -->
+      <button onclick="openFeedbackModal()" id="headerFeedbackBtn" class="flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center justify-center gap-1.5 transition">
+        <i data-lucide="lightbulb" id="headerFeedbackIcon" class="w-3.5 h-3.5"></i>
+        <span id="headerFeedbackTitle">Request Feature</span>
+      </button>
+
+      <!-- iOS Support Button -->
+      <button onclick="openDonateModal()" class="flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm">
+        <i data-lucide="heart" class="w-3.5 h-3.5 text-pink-400 fill-pink-400/20"></i>
+        <span>Support iOS App</span>
+      </button>
+
+      <!-- Host Authentication / Panel Button -->
+      <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="flex-1 py-2 px-3 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-1.5 transition">
+        <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
+        <span id="adminNavText">Host Login</span>
+      </button>
+    </div>
+  </div>
 
   <!-- Party Details Modal with Multi-Comment Feed -->
   <div id="partyDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
@@ -393,12 +400,36 @@
     const firebaseConfig = {
       apiKey: "__FIREBASE_API_KEY__",
       authDomain: "__FIREBASE_AUTH_DOMAIN__",
-      databaseURL: "https://party-finder-a2983-default-rtdb.firebaseio.com",
+      databaseURL: "__FIREBASE_DATABASE_URL__",
       projectId: "__FIREBASE_PROJECT_ID__",
       storageBucket: "__FIREBASE_STORAGE_BUCKET__",
       messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
       appId: "__FIREBASE_APP_ID__"
     };
+
+    // Discord Webhook Secret Placeholder
+    const DISCORD_WEBHOOK_URL = "__DISCORD_WEBHOOK_URL__";
+
+    function sendDiscordNotification(title, description, colorHex = 0xa855f7, fields = []) {
+      if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("__DISCORD_WEBHOOK_URL__")) return;
+
+      const payload = {
+        embeds: [{
+          title: title,
+          description: description,
+          color: colorHex,
+          fields: fields,
+          timestamp: new Date().toISOString(),
+          footer: { text: "Drop the Addy Alerts" }
+        }]
+      };
+
+      fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(err => console.error("Discord Webhook Error:", err));
+    }
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -666,6 +697,17 @@
           alert('Failed to submit proposal: ' + error.message);
         } else {
           alert('Party proposal submitted for admin review!');
+          
+          sendDiscordNotification(
+            "🎉 New Party Proposal Submitted!",
+            `**Name:** ${name}\n**Location:** ${location || "Campus Area"}`,
+            0xec4899,
+            [
+              { name: "Coordinates", value: `${lat}, ${lng}`, inline: true },
+              { name: "Action Needed", value: "Review in Host Admin Panel", inline: true }
+            ]
+          );
+
           document.getElementById('proposeName').value = '';
           document.getElementById('proposeLocation').value = '';
           document.getElementById('proposeLat').value = '';
@@ -1081,7 +1123,7 @@
       if (type === 'BUG') {
         headerTitle.textContent = "Report Bug";
         headerIcon.setAttribute('data-lucide', 'bug');
-        headerBtn.className = "px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-lg flex items-center gap-1.5 transition";
+        headerBtn.className = "flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-xl flex items-center justify-center gap-1.5 transition";
 
         modalTitle.textContent = "Report Bug";
         modalIconBox.className = "bg-red-500/20 p-2 rounded-xl text-red-400";
@@ -1093,7 +1135,7 @@
       } else {
         headerTitle.textContent = "Request Feature";
         headerIcon.setAttribute('data-lucide', 'lightbulb');
-        headerBtn.className = "px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition";
+        headerBtn.className = "flex-1 py-2 px-3 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center justify-center gap-1.5 transition";
 
         modalTitle.textContent = "Request Feature";
         modalIconBox.className = "bg-amber-500/20 p-2 rounded-xl text-amber-400";
@@ -1113,10 +1155,22 @@
       e.preventDefault();
       const text = document.getElementById('feedbackText').value.trim();
       const path = feedbackType === 'BUG' ? 'bugReports' : 'featureRequests';
-      db.ref(path).push({ description: text, submittedAt: new Date().toISOString() });
-      document.getElementById('feedbackText').value = '';
-      closeFeedbackModal();
-      alert(`Thank you! Your ${feedbackType === 'BUG' ? 'bug report' : 'feature request'} has been submitted.`);
+      
+      db.ref(path).push({ description: text, submittedAt: new Date().toISOString() }, (error) => {
+        if (!error) {
+          const isBug = feedbackType === 'BUG';
+          sendDiscordNotification(
+            isBug ? "🐛 New Bug Report Submitted" : "💡 New Feature Request Submitted",
+            text,
+            isBug ? 0xef4444 : 0xf59e0b,
+            [{ name: "Type", value: isBug ? "Bug Report" : "Feature Request", inline: true }]
+          );
+
+          document.getElementById('feedbackText').value = '';
+          closeFeedbackModal();
+          alert(`Thank you! Your ${isBug ? 'bug report' : 'feature request'} has been submitted.`);
+        }
+      });
     }
 
     function openFeedbackModal() { document.getElementById('feedbackModal').classList.remove('hidden'); }
