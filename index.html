@@ -223,10 +223,18 @@
         </div>
       </div>
 
-      <a href="https://cash.app/$YourCashtag" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 mb-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
-        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
-        Donate via Cash App / Venmo
-      </a>
+      <!-- Private Donation Buttons -->
+      <div class="space-y-2 mb-4">
+        <a href="https://cash.app/$YourCashtag" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
+          <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+          Donate via Cash App
+        </a>
+
+        <a href="https://buymeacoffee.com/YourUsername" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-900/20">
+          <i data-lucide="coffee" class="w-4 h-4"></i>
+          Buy Me a Coffee
+        </a>
+      </div>
 
       <button onclick="closeDonateModal()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-xs font-medium">Close</button>
     </div>
@@ -269,7 +277,7 @@
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
         <h2 class="text-lg font-bold text-white">Host Admin Panel</h2>
-        <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium">Log Out</button>
+        <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium hover:underline">Log Out</button>
       </div>
       <div class="flex-grow overflow-y-auto space-y-6 pr-1">
         <!-- Fundraiser Goal Editor -->
@@ -374,7 +382,7 @@
     const RADIUS_MILES = 3.0;
     const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
-    // Permanent Staple Locations (camelCase Keys)
+    // Permanent Staple Locations
     const PERMANENT_LOCATIONS = {
       "permGrove": { id: "permGrove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540, crowdReportCount: 0, crowdTotalSum: 0 },
       "permIvy": { id: "permIvy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510, crowdReportCount: 0, crowdTotalSum: 0 },
@@ -383,13 +391,11 @@
 
     // Slur and Profanity Filter List
     const BLOCKED_WORDS = [
-      // Add custom slurs or profanity keywords here (lowercase)
       "aperest", "coondog", "dogfucker", "Dothead", "Oreo", "assjockey", "cuntlicker", "kunt", "shithead", "anilingus", "asslick", "bulldyke", "Camel-Jockey", "Ching-Chong", "dickless", "fatso", "fudgepacker", "he-she", "niggaracci", "phuk", "Towel-head", "white-negro", "niggerous", "Bluegum", "fag", "shitskinned", "asswhore", "tard", "zipperhead", "Cracker", "Jewish-lightning", "asslicker", "cocksmoker", "cocksucker", "crippled", "cumfest", "cuntsucker", "doggystyle", "farm-nigger", "honkers", "Northern-Monkey", "poon", "titfuck", "sweat-like-a-nigger", "Christfag", "cuntboy", "Niggerian", "niggerbitch", "niggerboy", "niggercide", "niggerdick", "shitskin", "twat", "Chink", "cumskin", "fuuck", "niggerosity", "niggerjew", "anal", "antinigger", "Arabush", "Buddhahead", "Democunt", "dike", "Golliwog", "homobangers", "Indognesial", "Mexicoon", "phuking", "phukking", "asspirate", "felatio", "transgenderedness", "Porch-monkey", "shitnigger", "rape", "culture", "arabs", "bastard", "blindie", "bulldike", "butchdike", "camelfucker", "Chinaman", "cumshot", "dripdick", "fag-mag", "gatorbait", "hitlerism", "Jew-down", "Jewnited-Snakes", "Jewy", "leftover", "mentally-retarded", "midget", "nigga-please", "Nigger-toe", "niggeration", "niggerette", "niggerphile", "niggerspeak", "nizzle", "Prairie-nigger", "randy", "she-he", "shemale", "slam-pig", "snigger", "spaz", "Spearchucker", "white-nigger", "yellow-nigger", "zhidovka", "stfu", "nigger-rigged", "Africoon-Americoon", "Jigaboo", "kyke", "niggerdom", "assfuck", "assklown", "balllicker", "Jewfucker", "jiggabo", "nigfant", "niggergram", "porchmonkey", "Sand-nigger", "yard-ape", "queer", "asspuppies", "black-trash", "blackman", "fatass", "fucktardedly", "jism", "niggling", "nigglings", "Paki", "shitface", "titfucker", "Turd-World", "twobitwhore", "willy", "niggerfuck", "sixtynine", "ABCD", "China-doll", "coon", "Curry-muncher", "fuckwhore", "pussy", "trap", "Christcuck", "fatfuck", "Oriental", "niggerhead", "assfucker", "asshole", "asshore", "Aunt-Jemima", "bastardess", "beaner", "bitching", "boobs", "butt-fuck", "buttpirate", "Chernozhopy", "choad", "Citations:niggerdick", "cockblock", "cockfight", "cooter", "dick", "dickhead", "douchebag", "dumbass", "Dune-coon", "dyke", "fuckity-bye", "Gypsy", "lactate", "lesbo", "Malingsialan", "negroid", "niggerization", "niggerskin", "Piefke", "sandnigger", "slutt", "snownigger", "timbernigger", "transgendered", "troon", "Uncle-Tom", "Zhyd", "Zionazi"
     ];
 
     function containsProfanity(text) {
       const lowerText = text.toLowerCase();
-      // Clean up common leetspeak / character substitutions if needed
       return BLOCKED_WORDS.some(word => {
         const regex = new RegExp(`\\b${word}\\b`, 'i');
         return regex.test(lowerText) || lowerText.includes(word);
@@ -397,44 +403,39 @@
     }
 
     // Atomic Database Seed
-      function seedPermanentLocations() {
-    db.ref('parties').once('value', (snapshot) => {
-      const val = snapshot.val() || {};
-      const updates = {};
-      let needsUpdate = false;
+    function seedPermanentLocations() {
+      db.ref('parties').once('value', (snapshot) => {
+        const val = snapshot.val() || {};
+        const updates = {};
+        let needsUpdate = false;
 
-      Object.keys(PERMANENT_LOCATIONS).forEach(id => {
-        if (!val[id]) {
-          updates[`parties/${id}`] = {
-            ...PERMANENT_LOCATIONS[id],
-            lastUpdated: new Date().toISOString()
-          };
-          needsUpdate = true;
+        Object.keys(PERMANENT_LOCATIONS).forEach(id => {
+          if (!val[id]) {
+            updates[`parties/${id}`] = {
+              ...PERMANENT_LOCATIONS[id],
+              lastUpdated: new Date().toISOString()
+            };
+            needsUpdate = true;
+          }
+        });
+
+        if (needsUpdate) {
+          db.ref().update(updates);
         }
       });
-
-      if (needsUpdate) {
-        db.ref().update(updates);
-      }
-    });
-  }
+    }
 
     seedPermanentLocations();
 
-    // Sync database & merge staple locations locally
-    // Sync database & merge staple locations cleanly
+    // Deep merge live Firebase data over PERMANENT_LOCATIONS
     db.ref('parties').on('value', (snapshot) => {
       const rawVal = snapshot.val() || {};
       
-      // Deep merge Firebase data over PERMANENT_LOCATIONS
       partiesData = {};
-      
-      // First populate permanent defaults
       Object.keys(PERMANENT_LOCATIONS).forEach(id => {
         partiesData[id] = { ...PERMANENT_LOCATIONS[id] };
       });
 
-      // Override with live database entries
       Object.keys(rawVal).forEach(id => {
         partiesData[id] = {
           ...(partiesData[id] || {}),
@@ -595,6 +596,15 @@
       }
     }
 
+    function handleAdminLogout() {
+      auth.signOut().then(() => {
+        closeHostModal();
+        alert('Logged out of Admin Panel.');
+      }).catch((error) => {
+        alert('Error logging out: ' + error.message);
+      });
+    }
+
     // Status Report Handler
     function handleStatusSubmit(e) {
       e.preventDefault();
@@ -636,7 +646,6 @@
       const commentText = input.value.trim();
       if (!commentText) return;
 
-      // Check against blocked words / slurs
       if (containsProfanity(commentText)) {
         alert('Your comment contains prohibited language and cannot be posted.');
         return;
