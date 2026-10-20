@@ -1054,16 +1054,15 @@
       const oldData = partiesData;
       partiesData = snapshot.val() || {};
 
-      // Trigger notification if a subscribed party changes status
-      Object.values(partiesData).forEach(newParty => {
-        const prevParty = oldData[newParty.id];
-        if (prevParty && subscribedPartyIds.includes(newParty.id)) {
-          if (effectiveStatus(prevParty) !== effectiveStatus(newParty)) {
-            triggerBrowserNotification(
-              `Party Update: ${newParty.name}`,
-              `Status changed to ${statusLabel(effectiveStatus(newParty))}!`
-            );
-          }
+      // Alert this tab if a subscribed party changes status
+      Object.entries(partiesData).forEach(([partyId, newParty]) => {
+        const prevParty = oldData[partyId];
+        if (prevParty && subscribedPartyIds.includes(partyId) && effectiveStatus(prevParty) !== effectiveStatus(newParty)) {
+          triggerBrowserNotification(
+            `Party Update: ${newParty.name}`,
+            `Status changed to ${statusLabel(effectiveStatus(newParty))}!`,
+            partyId
+          );
         }
       });
 
@@ -1703,8 +1702,10 @@
     }
 
     // Party Subscription Toggle (Browser Notifications)
+    let subscriptionBusy = false;
+
     function togglePartySubscription() {
-      if (!selectedPartyId) return;
+      if (!selectedPartyId || subscriptionBusy) return;
 
       if (!("Notification" in window)) {
         alert("Browser notifications are not supported in your browser.");
@@ -1732,9 +1733,12 @@
       else subscribedPartyIds.splice(index, 1);
 
       localStorage.setItem('subscribedPartyIds', JSON.stringify(subscribedPartyIds));
-      updateSubscriptionButtonUI();
 
-      syncPushSubscription(partyId, subscribing).then((pushWorks) => {
+      subscriptionBusy = true;
+      updateSubscriptionButtonUI();
+      syncPushSubscription(partyId, subscribing).then(({ pushWorks, reason }) => {
+        subscriptionBusy = false;
+        updateSubscriptionButtonUI();
         if (!subscribing) {
           alert("Unsubscribed from party updates for this location.");
         } else if (pushWorks) {
@@ -1742,7 +1746,7 @@
         } else if (isIOS() && !isStandalone()) {
           alert("Subscribed while this page is open. To get alerts when it's closed, tap Share → Add to Home Screen, open Drop the Addy from your home screen, and subscribe again.");
         } else {
-          alert("Subscribed! You'll get a notification when this party's status changes while this site is open.");
+          alert(`Subscribed! You'll get a notification when this party's status changes while this site is open.${reason ? `\n\n(Alerts with the site closed couldn't be set up: ${reason})` : ''}`);
         }
       });
     }
@@ -1758,27 +1762,46 @@
       navigator.serviceWorker.register('sw.js').then(reg => { swRegistration = reg; }).catch(err => console.warn('Service worker registration failed:', err));
     }
 
+    // Resolves { token } or { token: null, reason }. The token is fetched once per page load and reused.
+    let pushTokenPromise = null;
     function getPushToken() {
-      if (!pushConfigured || !swRegistration || !firebase.messaging) return Promise.resolve(null);
-      return Promise.resolve(firebase.messaging.isSupported())
-        .then(supported => supported
-          ? firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swRegistration })
-          : null)
-        .catch(err => { console.warn('Push setup failed:', err); return null; });
+      if (!pushConfigured) return Promise.resolve({ token: null, reason: 'push is not configured on this site' });
+      if (!swRegistration || !firebase.messaging) return Promise.resolve({ token: null, reason: 'the app service worker is not ready yet, try again in a moment' });
+      if (!pushTokenPromise) {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), 15000));
+        pushTokenPromise = Promise.resolve(firebase.messaging.isSupported())
+          .then(supported => {
+            if (!supported) throw new Error('this browser does not support push');
+            return Promise.race([
+              firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swRegistration }),
+              timeout
+            ]);
+          })
+          .then(token => (token ? { token } : { token: null, reason: 'no push token was returned' }))
+          .catch(err => {
+            console.warn('Push setup failed:', err);
+            pushTokenPromise = null; // let the next tap try again
+            return { token: null, reason: (err && (err.code || err.message)) || 'unknown error' };
+          });
+      }
+      return pushTokenPromise;
     }
 
-    // Resolves true when this party's alerts will arrive by push even with the site closed
+    // Resolves { pushWorks, reason }: pushWorks is true when alerts arrive by push even with the site closed
     function syncPushSubscription(partyId, subscribed) {
       return whenSignedIn()
-        .then(user => getPushToken().then(token => {
-          if (!token) return false;
+        .then(user => getPushToken().then(({ token, reason }) => {
+          if (!token) return { pushWorks: false, reason };
           return db.ref(`pushSubscriptions/${user.uid}`).update({
             token,
             updatedAt: TIMESTAMP,
             [`parties/${partyId}`]: subscribed ? true : null
-          }).then(() => true);
+          }).then(() => ({ pushWorks: true }));
         }))
-        .catch(err => { console.warn('Push subscription failed:', err); return false; });
+        .catch(err => {
+          console.warn('Push subscription failed:', err);
+          return { pushWorks: false, reason: (err && (err.code || err.message)) || 'unknown error' };
+        });
     }
 
     let deferredInstallPrompt = null;
@@ -1810,7 +1833,11 @@
       if (!btn || !selectedPartyId) return;
 
       const isSubbed = subscribedPartyIds.includes(selectedPartyId);
-      if (isSubbed) {
+      btn.disabled = subscriptionBusy;
+      if (subscriptionBusy) {
+        btn.className = "px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 border border-gray-700 text-xs font-semibold flex items-center gap-1.5 transition opacity-70";
+        text.textContent = "Saving…";
+      } else if (isSubbed) {
         btn.className = "px-3 py-1.5 rounded-xl bg-purple-600 text-white border border-purple-400 text-xs font-semibold flex items-center gap-1.5 transition";
         text.textContent = "Subscribed";
       } else {
@@ -1819,9 +1846,19 @@
       }
     }
 
-    function triggerBrowserNotification(title, body) {
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body: body, icon: 'icons/icon-192.png' });
+    // Android (browser and app) only allows notifications through the service worker, so use that when
+    // possible. The tag matches push alerts for the same party, so one replaces the other instead of doubling.
+    function triggerBrowserNotification(title, body, partyId) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const options = { body, icon: 'icons/icon-192.png', tag: `party-${partyId}` };
+      try {
+        if (swRegistration && swRegistration.showNotification) {
+          swRegistration.showNotification(title, options).catch(err => console.warn('Notification failed:', err));
+        } else {
+          new Notification(title, options);
+        }
+      } catch (err) {
+        console.warn('Notification failed:', err);
       }
     }
 
