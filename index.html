@@ -67,9 +67,10 @@
           Propose Party
         </button>
 
-        <button onclick="openHostPanel()" class="px-3 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
-          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
-          Host Panel
+        <!-- Dynamic Admin Action Button (Host Login vs Host Panel) -->
+        <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
+          <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
+          <span id="adminNavText">Host Login</span>
         </button>
       </div>
     </div>
@@ -230,7 +231,7 @@
           Donate via Cash App
         </a>
 
-        <a href="https://buymeacoffee.com/callofdutygamer1950" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-900/20">
+        <a href="buymeacoffee.com/callofdutygamer1950" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-900/20">
           <i data-lucide="coffee" class="w-4 h-4"></i>
           Buy Me a Coffee
         </a>
@@ -268,6 +269,32 @@
           <button type="button" onclick="closeProposeModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
           <button type="submit" class="px-4 py-2 text-xs bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg">Submit for Approval</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Login Gate Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-4 h-4 text-purple-400"></i> Host Authentication
+        </h2>
+        <button onclick="closeLoginModal()" class="text-gray-400 hover:text-white text-xs">✕</button>
+      </div>
+      
+      <form onsubmit="handleAdminLoginSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-[10px] font-semibold text-gray-400 mb-1">Email</label>
+          <input type="email" id="loginEmail" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
+        </div>
+        <div>
+          <label class="block text-[10px] font-semibold text-gray-400 mb-1">Password</label>
+          <input type="password" id="loginPassword" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition">
+          Log In
+        </button>
       </form>
     </div>
   </div>
@@ -375,6 +402,7 @@
     let tempPickerMarker = null;
     let isSelectingLocation = false;
     let mapMarkers = [];
+    let currentAdminUser = null;
 
     // Slippery Rock Coordinates & 3-Mile Geofence
     const DEFAULT_LAT = 41.0638;
@@ -400,6 +428,63 @@
         const regex = new RegExp(`\\b${word}\\b`, 'i');
         return regex.test(lowerText) || lowerText.includes(word);
       });
+    }
+
+    // Auth State Tracking
+    auth.onAuthStateChanged((user) => {
+      currentAdminUser = user;
+      const navText = document.getElementById('adminNavText');
+      const navIcon = document.getElementById('adminNavIcon');
+
+      if (user) {
+        if (navText) navText.textContent = 'Host Panel';
+        if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
+      } else {
+        if (navText) navText.textContent = 'Host Login';
+        if (navIcon) navIcon.setAttribute('data-lucide', 'lock');
+        closeHostModal();
+      }
+
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
+    });
+
+    function handleAdminButtonClick() {
+      if (currentAdminUser) {
+        openHostPanel();
+      } else {
+        openLoginModal();
+      }
+    }
+
+    function handleAdminLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          closeLoginModal();
+          document.getElementById('loginEmail').value = '';
+          document.getElementById('loginPassword').value = '';
+          openHostPanel();
+        })
+        .catch((error) => {
+          alert('Authentication Failed: ' + error.message);
+        });
+    }
+
+    function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+    function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+
+    function openHostPanel() {
+      if (!currentAdminUser) {
+        alert('Access Denied: You must be logged in as an administrator.');
+        openLoginModal();
+        return;
+      }
+      document.getElementById('hostModal').classList.remove('hidden');
     }
 
     // Atomic Database Seed
@@ -962,7 +1047,6 @@
     function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
     function openProposeModal() { document.getElementById('proposeModal').classList.remove('hidden'); }
     function closeProposeModal() { document.getElementById('proposeModal').classList.add('hidden'); }
-    function openHostPanel() { document.getElementById('hostModal').classList.remove('hidden'); }
     function closeHostModal() { document.getElementById('hostModal').classList.add('hidden'); }
 
     function populateDropdown() {
