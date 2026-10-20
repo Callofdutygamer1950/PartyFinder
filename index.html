@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Campus Party Monitor</title>
+  <title>Drop the Addy</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -19,7 +19,7 @@
   <div id="mapSelectBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-purple-900/90 text-white px-6 py-3 rounded-2xl shadow-2xl border border-purple-400 flex items-center gap-4 backdrop-blur-md">
     <div class="flex items-center gap-2 text-xs font-semibold">
       <i data-lucide="map-pin" class="w-4 h-4 text-pink-400 animate-bounce"></i>
-      Click anywhere on the map to select the party location
+      Click anywhere within 1 mile of campus to select the party location
     </div>
     <button onclick="cancelMapSelection()" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs">Cancel</button>
   </div>
@@ -33,9 +33,9 @@
         </div>
         <div>
           <h1 class="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-            Campus Party Finder
+            Drop the Addy
           </h1>
-          <p class="text-xs text-gray-400">Real-Time Anonymous Party Tracker</p>
+          <p class="text-xs text-gray-400">Anonymous Party Tracker</p>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
@@ -49,10 +49,10 @@
           </button>
         </div>
 
-        <!-- Combined Feedback & Support Button -->
-        <button onclick="openFeedbackModal()" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition">
-          <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-          Feedback & Support
+        <!-- Dynamic Feedback Button (Starts as Request Feature) -->
+        <button onclick="openFeedbackModal()" id="headerFeedbackBtn" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="lightbulb" id="headerFeedbackIcon" class="w-3.5 h-3.5"></i>
+          <span id="headerFeedbackTitle">Request Feature</span>
         </button>
 
         <button onclick="openDonateModal()" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-lg flex items-center gap-1.5 transition shadow-sm">
@@ -99,6 +99,7 @@
           <p class="font-bold text-white mb-1">Map Legend</p>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Active Party</div>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500 inline-block"></span> Quiet Location</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-800 border border-gray-600 inline-block"></span> Outside 1-Mi Zone</div>
         </div>
       </div>
     </div>
@@ -180,37 +181,38 @@
   <div id="feedbackModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-amber-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
       <div class="flex items-center gap-3 mb-3">
-        <div class="bg-amber-500/20 p-2 rounded-xl text-amber-400"><i data-lucide="message-square" class="w-5 h-5"></i></div>
-        <h2 class="text-lg font-bold text-white">Feedback & Support</h2>
+        <div class="bg-amber-500/20 p-2 rounded-xl text-amber-400" id="feedbackModalIconBox"><i data-lucide="lightbulb" class="w-5 h-5"></i></div>
+        <h2 class="text-lg font-bold text-white" id="feedbackModalTitle">Request Feature</h2>
       </div>
 
-      <!-- Type Selector -->
+      <!-- Type Selector Toggle -->
       <div class="flex bg-gray-800 p-1 rounded-xl mb-4 border border-gray-700">
-        <button type="button" onclick="setFeedbackType('BUG')" id="feedbackTypeBug" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition">Report Bug</button>
-        <button type="button" onclick="setFeedbackType('FEATURE')" id="feedbackTypeFeature" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition">Request Feature</button>
+        <button type="button" onclick="setFeedbackType('FEATURE')" id="feedbackTypeFeature" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white transition">Request Feature</button>
+        <button type="button" onclick="setFeedbackType('BUG')" id="feedbackTypeBug" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition">Report Bug</button>
       </div>
 
       <form onsubmit="handleFeedbackSubmit(event)" class="space-y-4">
-        <textarea id="feedbackText" rows="4" required placeholder="Describe what went wrong or suggest an idea..." class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500"></textarea>
+        <textarea id="feedbackText" rows="4" required placeholder="Suggest an idea or describe a feature..." class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500"></textarea>
         <div class="flex justify-end gap-3">
           <button type="button" onclick="closeFeedbackModal()" class="px-4 py-2 text-xs text-gray-400 hover:text-white">Cancel</button>
-          <button type="submit" class="px-4 py-2 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg">Submit Feedback</button>
+          <button type="submit" id="feedbackSubmitBtn" class="px-4 py-2 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg">Submit Request</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Donation Modal -->
+  <!-- Donation Modal with Payment Link Button -->
   <div id="donateModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-pink-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
       <div class="flex items-center gap-3 mb-3">
         <div class="bg-pink-500/20 p-2 rounded-xl text-pink-400"><i data-lucide="smartphone" class="w-6 h-6"></i></div>
         <div>
-          <h2 class="text-lg font-bold text-white">Help Us Bring Party Finder to iOS!</h2>
-          <p class="text-xs text-pink-400/90 font-medium">Native App Fundraiser</p>
+          <h2 class="text-lg font-bold text-white">Help Us Bring Drop the Addy to iOS!</h2>
+          <p class="text-xs text-pink-400/90 font-medium">Apple Developer Fee Fundraiser</p>
         </div>
       </div>
-      <div class="bg-gray-800/80 border border-gray-700 rounded-xl p-4 mb-5 space-y-2">
+      
+      <div class="bg-gray-800/80 border border-gray-700 rounded-xl p-4 mb-4 space-y-2">
         <div class="flex justify-between items-center text-xs">
           <span class="text-gray-300 font-medium">Goal Progress:</span>
           <span id="donateProgressText" class="font-bold text-emerald-400">$0 / $99</span>
@@ -219,6 +221,13 @@
           <div id="donateProgressBar" class="bg-gradient-to-r from-pink-500 to-emerald-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
         </div>
       </div>
+
+      <!-- Action Button to Donate -->
+      <a href="https://cash.app/$YourCashtag" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 mb-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
+        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+        Donate via Cash App / Venmo
+      </a>
+
       <button onclick="closeDonateModal()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-xs font-medium">Close</button>
     </div>
   </div>
@@ -230,11 +239,11 @@
       <form onsubmit="handleProposeParty(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Party Name</label>
-          <input type="text" id="proposeName" required placeholder="e.g. Pine Hall Basement Party" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+          <input type="text" id="proposeName" required placeholder="e.g. The Ivy" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Location Description</label>
-          <input type="text" id="proposeLocation" placeholder="e.g. 200 Campus Drive" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+          <input type="text" id="proposeLocation" placeholder="e.g. In the yard, your address if you're ready for it" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
         </div>
         
         <!-- Interactive Map Selector Button -->
@@ -309,14 +318,17 @@
     let partiesData = {};
     let activeFilter = 'ALL';
     let selectedPartyId = null;
-    let feedbackType = 'BUG';
+    let feedbackType = 'FEATURE'; // Default to Request Feature
     let map = null;
     let tempPickerMarker = null;
     let isSelectingLocation = false;
     let mapMarkers = [];
 
+    // Slippery Rock PA Center Coordinates
     const DEFAULT_LAT = 41.0638;
     const DEFAULT_LNG = -80.0528;
+    const RADIUS_MILES = 1.0;
+    const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
     // Realtime Database Sync
     db.ref('parties').on('value', (snapshot) => {
@@ -336,7 +348,6 @@
       lucide.createIcons();
     }
 
-    // Streamlined Cards
     function renderPartiesGrid() {
       const grid = document.getElementById('partiesGrid');
       grid.innerHTML = '';
@@ -379,10 +390,22 @@
       });
     }
 
-    // Leaflet OpenStreetMap with CSS Dark Matter Filter
+    // Leaflet OpenStreetMap bounded to 1 Mile of Slippery Rock with Outside Greying Mask
     function initMap() {
       if (map) return;
-      map = L.map('campusMap').setView([DEFAULT_LAT, DEFAULT_LNG], 15);
+
+      const latDelta = 0.016; 
+      const lngDelta = 0.021; 
+      const southWest = L.latLng(DEFAULT_LAT - latDelta, DEFAULT_LNG - lngDelta);
+      const northEast = L.latLng(DEFAULT_LAT + latDelta, DEFAULT_LNG + lngDelta);
+      const bounds = L.latLngBounds(southWest, northEast);
+
+      map = L.map('campusMap', {
+        maxBounds: bounds,
+        maxBoundsViscosity: 0.9,
+        minZoom: 14,
+        maxZoom: 18
+      }).setView([DEFAULT_LAT, DEFAULT_LNG], 15);
 
       const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -391,10 +414,36 @@
 
       osmLayer.getContainer().style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
 
-      // Map Click Handler for Party Location Selection
+      // Outer bounding box polygon for masking outer area
+      const outerWorld = [
+        [90, -180], [90, 180], [-90, 180], [-90, -180]
+      ];
+
+      const circlePoints = [];
+      for (let i = 0; i <= 360; i += 5) {
+        const rad = (i * Math.PI) / 180;
+        const lat = DEFAULT_LAT + (RADIUS_METERS / 111320) * Math.cos(rad);
+        const lng = DEFAULT_LNG + (RADIUS_METERS / (111320 * Math.cos(DEFAULT_LAT * Math.PI / 180))) * Math.sin(rad);
+        circlePoints.push([lat, lng]);
+      }
+
+      L.polygon([outerWorld, circlePoints], {
+        color: '#a855f7',
+        weight: 2,
+        fillColor: '#030712',
+        fillOpacity: 0.75,
+        interactive: false
+      }).addTo(map);
+
       map.on('click', (e) => {
         if (!isSelectingLocation) return;
         
+        const distMeters = map.distance(e.latlng, L.latLng(DEFAULT_LAT, DEFAULT_LNG));
+        if (distMeters > RADIUS_METERS) {
+          alert('Please pick a location within 1 mile of Slippery Rock campus.');
+          return;
+        }
+
         const lat = e.latlng.lat.toFixed(6);
         const lng = e.latlng.lng.toFixed(6);
 
@@ -418,8 +467,8 @@
       mapMarkers = [];
 
       Object.values(partiesData).forEach(party => {
-        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.01;
-        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.01;
+        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.008;
+        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.008;
         const isParty = party.status === 'ACTIVE PARTY';
 
         const marker = L.circleMarker([lat, lng], {
@@ -455,7 +504,6 @@
       document.getElementById('mapSelectBanner').classList.add('hidden');
     }
 
-    // Dynamic UI Button Highlight Switching
     function switchView(view) {
       const grid = document.getElementById('partiesGrid');
       const mapContainer = document.getElementById('mapViewContainer');
@@ -494,44 +542,71 @@
     }
 
     // Fundraiser Management
-    // Fundraiser Management - Sets exact total and updates UI bar
-function updateDonateProgressBar(raised) {
-  const goal = 99;
-  const currentTotal = Math.max(0, parseInt(raised) || 0); // Ensures non-negative values
-  const percentage = Math.min(Math.round((currentTotal / goal) * 100), 100);
+    function updateDonateProgressBar(raised) {
+      const goal = 99;
+      const currentTotal = Math.max(0, parseInt(raised) || 0);
+      const percentage = Math.min(Math.round((currentTotal / goal) * 100), 100);
 
-  document.getElementById('donateProgressText').textContent = `$${currentTotal} / $${goal}`;
-  document.getElementById('donateProgressBar').style.width = `${percentage}%`;
-  document.getElementById('adminFundraiserInput').value = currentTotal;
-}
-
-function updateFundraiserAmount() {
-  const inputVal = document.getElementById('adminFundraiserInput').value;
-  // Parse input as absolute total raised
-  const newTotal = Math.max(0, parseInt(inputVal) || 0);
-
-  // Write exact total directly to Firebase
-  db.ref('fundraiser/raised').set(newTotal, (error) => {
-    if (error) {
-      alert('Error updating fundraiser total: ' + error.message);
-    } else {
-      alert(`Fundraiser total updated to $${newTotal}!`);
+      document.getElementById('donateProgressText').textContent = `$${currentTotal} / $${goal}`;
+      document.getElementById('donateProgressBar').style.width = `${percentage}%`;
+      document.getElementById('adminFundraiserInput').value = currentTotal;
     }
-  });
-}
 
-    // Combined Feedback Modal Handlers
+    function updateFundraiserAmount() {
+      const inputVal = document.getElementById('adminFundraiserInput').value;
+      const newTotal = Math.max(0, parseInt(inputVal) || 0);
+
+      db.ref('fundraiser/raised').set(newTotal, (error) => {
+        if (error) {
+          alert('Error updating fundraiser total: ' + error.message);
+        } else {
+          alert(`Fundraiser total updated to $${newTotal}!`);
+        }
+      });
+    }
+
+    // Dynamic Feedback Modal & Header Button Logic (Defaults to Feature Request)
     function setFeedbackType(type) {
       feedbackType = type;
-      const bugBtn = document.getElementById('feedbackTypeBug');
-      const reqBtn = document.getElementById('feedbackTypeFeature');
+
+      const headerBtn = document.getElementById('headerFeedbackBtn');
+      const headerTitle = document.getElementById('headerFeedbackTitle');
+      const headerIcon = document.getElementById('headerFeedbackIcon');
+      
+      const bugToggleBtn = document.getElementById('feedbackTypeBug');
+      const featureToggleBtn = document.getElementById('feedbackTypeFeature');
+      const modalTitle = document.getElementById('feedbackModalTitle');
+      const modalIconBox = document.getElementById('feedbackModalIconBox');
+      const modalTextarea = document.getElementById('feedbackText');
+      const modalSubmitBtn = document.getElementById('feedbackSubmitBtn');
+
       if (type === 'BUG') {
-        bugBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition';
-        reqBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
+        headerTitle.textContent = "Report Bug";
+        headerIcon.setAttribute('data-lucide', 'bug');
+        headerBtn.className = "px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-lg flex items-center gap-1.5 transition";
+
+        modalTitle.textContent = "Report Bug";
+        modalIconBox.className = "bg-red-500/20 p-2 rounded-xl text-red-400";
+        modalIconBox.innerHTML = '<i data-lucide="bug" class="w-5 h-5"></i>';
+        bugToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition';
+        featureToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
+        modalTextarea.placeholder = "Describe what went wrong or steps to reproduce...";
+        modalSubmitBtn.className = 'px-4 py-2 text-xs bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg';
       } else {
-        reqBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white transition';
-        bugBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
+        headerTitle.textContent = "Request Feature";
+        headerIcon.setAttribute('data-lucide', 'lightbulb');
+        headerBtn.className = "px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition";
+
+        modalTitle.textContent = "Request Feature";
+        modalIconBox.className = "bg-amber-500/20 p-2 rounded-xl text-amber-400";
+        modalIconBox.innerHTML = '<i data-lucide="lightbulb" class="w-5 h-5"></i>';
+        featureToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white transition';
+        bugToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
+        modalTextarea.placeholder = "Suggest an idea or describe a feature you'd like...";
+        modalSubmitBtn.className = 'px-4 py-2 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg';
       }
+
+      lucide.createIcons();
     }
 
     function handleFeedbackSubmit(e) {
@@ -541,7 +616,7 @@ function updateFundraiserAmount() {
       db.ref(path).push({ description: text, submittedAt: new Date().toISOString() });
       document.getElementById('feedbackText').value = '';
       closeFeedbackModal();
-      alert('Thank you! Your feedback has been submitted to the host team.');
+      alert(`Thank you! Your ${feedbackType === 'BUG' ? 'bug report' : 'feature request'} has been submitted.`);
     }
 
     function openFeedbackModal() { document.getElementById('feedbackModal').classList.remove('hidden'); }
@@ -603,7 +678,10 @@ function updateFundraiserAmount() {
       });
     }
 
-    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+    document.addEventListener('DOMContentLoaded', () => {
+      setFeedbackType('FEATURE');
+      lucide.createIcons();
+    });
   </script>
 </body>
 </html>
