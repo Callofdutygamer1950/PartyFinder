@@ -1,9 +1,12 @@
 name: Deploy Drop the Addy to GitHub Pages
 
+# The live site is always built from main. If a "preview" branch exists, it is
+# published alongside it under /preview/ so changes can be tried before going live.
 on:
   push:
     branches:
       - main
+      - preview
 
 permissions:
   contents: read
@@ -18,10 +21,30 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout main (live site)
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-src
 
-      - name: Inject Secrets into index.html
+      - name: Checkout preview branch
+        id: preview
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: preview
+          path: preview-src
+
+      - name: Assemble site
+        run: |
+          mkdir _site
+          rsync -a --exclude '.git' --exclude '.github' --exclude '.gitignore' main-src/ _site/
+          if [ "${{ steps.preview.outcome }}" = "success" ]; then
+            mkdir -p _site/preview
+            rsync -a --exclude '.git' --exclude '.github' --exclude '.gitignore' preview-src/ _site/preview/
+          fi
+
+      - name: Inject Secrets
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
@@ -30,14 +53,18 @@ jobs:
           FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
           FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_VAPID_KEY: ${{ secrets.FIREBASE_VAPID_KEY }}
         run: |
-          sed -i "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" index.html
-          sed -i "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" index.html
-          sed -i "s|__FIREBASE_DATABASE_URL__|${FIREBASE_DATABASE_URL}|g" index.html
-          sed -i "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" index.html
-          sed -i "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" index.html
-          sed -i "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" index.html
-          sed -i "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" index.html
+          for f in $(find _site -name index.html -o -name sw.js); do
+            sed -i "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" "$f"
+            sed -i "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" "$f"
+            sed -i "s|__FIREBASE_DATABASE_URL__|${FIREBASE_DATABASE_URL}|g" "$f"
+            sed -i "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" "$f"
+            sed -i "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" "$f"
+            sed -i "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" "$f"
+            sed -i "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" "$f"
+            sed -i "s|__FIREBASE_VAPID_KEY__|${FIREBASE_VAPID_KEY}|g" "$f"
+          done
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -45,7 +72,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

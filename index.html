@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; connect-src 'self' https: wss:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:;">
   <title>Drop the Addy</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#030712">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Drop the Addy">
   
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://unpkg.com/lucide@1.49.0/dist/umd/lucide.min.js" integrity="sha384-7mWwAGEOOlxvEBR+Mpy0eVhGL+9abGHkZtVoTs+dvrWkI5g00lyMaAxRIK+rqXGt" crossorigin="anonymous"></script>
@@ -72,6 +80,15 @@
         <button onclick="setFilter('QUIET')" id="filter-QUIET" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">💀 Dead</button>
       </div>
     </div>
+    <div class="flex flex-wrap gap-2 -mt-4 mb-8 justify-center sm:justify-end items-center">
+      <label for="sortSelect" class="text-xs text-gray-500">Sort by</label>
+      <select id="sortSelect" onchange="setSort(this.value)" class="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+        <option value="HOT">🔥 Hottest</option>
+        <option value="CLOSE">📍 Closest</option>
+        <option value="NEW">🕒 Newest</option>
+      </select>
+      <button onclick="requestUserLocation()" id="nearMeBtn" class="px-3 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">📍 Near me</button>
+    </div>
 
     <!-- View Container: Grid View -->
     <div id="partiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></div>
@@ -126,6 +143,21 @@
         </button>
       </form>
     </section>
+
+    <!-- Safety Card -->
+    <section class="bg-gray-900/80 border border-emerald-500/30 rounded-2xl p-6 max-w-2xl mx-auto shadow-xl mt-8">
+      <div class="flex items-center gap-3 mb-3">
+        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+        <h2 class="text-lg font-bold text-white">Get Home Safe</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <a href="tel:911" class="bg-red-950/60 border border-red-500/30 rounded-xl p-3 text-red-300 hover:bg-red-900/60 transition"><span class="font-bold block">🚨 Emergency</span>Call 911</a>
+        <a href="tel:+17247383333" class="bg-gray-800/60 border border-gray-700 rounded-xl p-3 text-gray-200 hover:bg-gray-800 transition"><span class="font-bold block">🚓 SRU University Police (24/7)</span>724-738-3333 &middot; ask for a campus safety escort</a>
+        <a href="tel:+18002221222" class="bg-gray-800/60 border border-gray-700 rounded-xl p-3 text-gray-200 hover:bg-gray-800 transition"><span class="font-bold block">🧪 Poison Control / alcohol poisoning</span>1-800-222-1222</a>
+        <a href="tel:988" class="bg-gray-800/60 border border-gray-700 rounded-xl p-3 text-gray-200 hover:bg-gray-800 transition"><span class="font-bold block">💬 988 Crisis Lifeline</span>Call or text 988</a>
+      </div>
+      <p class="text-[11px] text-gray-500 mt-3">Watch your drink, go with friends, and leave with the people you came with. If someone can't stay awake or is breathing slowly, call 911.</p>
+    </section>
   </main>
 
   <!-- Integrated Footer Section -->
@@ -144,6 +176,12 @@
         <button onclick="openDonateModal()" class="px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-pink-400 border border-pink-500/30 hover:border-pink-500/60 rounded-xl flex items-center gap-1.5 transition shadow-sm">
           <i data-lucide="heart" class="w-3.5 h-3.5 text-pink-400 fill-pink-400/20"></i>
           <span>Support iOS App</span>
+        </button>
+
+        <!-- Install App Button (shown when the browser supports installing) -->
+        <button onclick="handleInstallClick()" id="installAppBtn" class="hidden px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-sky-400 border border-sky-500/30 hover:border-sky-500/60 rounded-xl flex items-center gap-1.5 transition">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+          <span>Install App</span>
         </button>
 
         <!-- Host Authentication / Panel Button -->
@@ -169,6 +207,10 @@
           <p id="modalPartyLocation" class="text-xs text-gray-400">Location</p>
         </div>
         <div class="flex items-center gap-2">
+          <button onclick="shareParty(selectedPartyId)" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+            <span>Share</span>
+          </button>
           <!-- Restored Subscribe Toggle Button -->
           <button id="modalSubscribeBtn" onclick="togglePartySubscription()" class="px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition">
             <i data-lucide="bell" class="w-3.5 h-3.5"></i>
@@ -347,6 +389,28 @@
           </div>
         </div>
 
+        <!-- Party Stats -->
+        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+          <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Party Stats
+          </h3>
+          <div id="adminStats" class="space-y-3 text-xs text-gray-300">
+            <p class="text-gray-500 italic">Loading stats...</p>
+          </div>
+        </div>
+
+        <!-- Cleanup Tools -->
+        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+          <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <i data-lucide="eraser" class="w-4 h-4"></i> Cleanup Tools
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="deleteOldComments()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Delete comments older than 7 days</button>
+            <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
+          </div>
+          <p class="text-[10px] text-gray-500 mt-2">Use "Reset votes" on a location below to zero its 👍/👎.</p>
+        </div>
+
         <!-- Comment Moderation -->
         <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
           <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -427,6 +491,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
   <script>
     // Injected via GitHub Actions environment secrets build step
@@ -491,6 +556,128 @@
     }
     function statusLabel(status) { return status === 'ACTIVE PARTY' ? '🎉 Party Time' : '💀 Dead'; }
 
+    const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
+    const HOUR_MS = 60 * 60 * 1000;
+    const DAY_MS = 24 * HOUR_MS;
+    let activeSort = 'HOT';
+    let userCoords = null;
+    const recentReportTimes = {};   // partyId -> report times (from reportLocks) in roughly the last hour
+    const recentReportRefs = {};
+
+    // Re-render at most once per animation frame when several listeners fire together
+    let renderQueued = false;
+    function scheduleRender() {
+      if (renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(() => { renderQueued = false; renderUI(); });
+    }
+
+    function recentReportCount(partyId) {
+      const cutoff = serverNow() - HOUR_MS;
+      return (recentReportTimes[partyId] || []).filter(t => t >= cutoff).length;
+    }
+
+    // Each party's report locks hold the time of every visitor's latest report; count the last hour's
+    function syncRecentReportListeners() {
+      Object.keys(partiesData).forEach(partyId => {
+        if (recentReportRefs[partyId]) return;
+        const ref = db.ref(`reportLocks/${partyId}`).orderByValue().startAt(serverNow() - HOUR_MS);
+        ref.on('value', (snap) => {
+          recentReportTimes[partyId] = Object.values(snap.val() || {}).map(Number);
+          scheduleRender();
+        }, () => {});
+        recentReportRefs[partyId] = ref;
+      });
+      Object.keys(recentReportRefs).forEach(partyId => {
+        if (partiesData[partyId]) return;
+        recentReportRefs[partyId].off();
+        delete recentReportRefs[partyId];
+        delete recentReportTimes[partyId];
+      });
+    }
+
+    function avgCrowdOf(party) {
+      const totalReports = toCount(party.crowdReportCount);
+      return Math.min(totalReports > 0 ? Math.round(toCount(party.crowdTotalSum) / totalReports) : 0, 2000);
+    }
+
+    function hotScore(partyId, party) {
+      const live = effectiveStatus(party) === 'ACTIVE PARTY';
+      return (live ? 1000 : 0) + recentReportCount(partyId) * 50 + avgCrowdOf(party) / 10 + (toCount(party.upvotes) - toCount(party.downvotes)) * 5;
+    }
+
+    function distanceMiles(lat1, lng1, lat2, lng2) {
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function partyDistance(party) {
+      if (!userCoords) return null;
+      return distanceMiles(userCoords.lat, userCoords.lng, Number(party.lat) || DEFAULT_LAT, Number(party.lng) || DEFAULT_LNG);
+    }
+
+    // Location stays in this tab's memory only; it is never saved or sent anywhere
+    function requestUserLocation(thenSortClosest = true) {
+      if (!navigator.geolocation) {
+        alert('Location is not available in this browser.');
+        return;
+      }
+      const btn = document.getElementById('nearMeBtn');
+      btn.textContent = '📍 Locating...';
+      navigator.geolocation.getCurrentPosition((pos) => {
+        userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        btn.textContent = '📍 Near me ✓';
+        if (thenSortClosest) setSort('CLOSE');
+        else renderUI();
+      }, () => {
+        btn.textContent = '📍 Near me';
+        alert('Could not get your location. Check that location access is allowed for this site.');
+        if (activeSort === 'CLOSE') setSort('HOT');
+      }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 5 * 60 * 1000 });
+    }
+
+    function setSort(sort) {
+      activeSort = sort;
+      document.getElementById('sortSelect').value = sort;
+      if (sort === 'CLOSE' && !userCoords) {
+        requestUserLocation(true);
+        return;
+      }
+      renderUI();
+    }
+
+    // Disconnect from the database while the tab is in the background, so idle tabs don't use up
+    // the free plan's 100 simultaneous connections. Reconnects as soon as the visitor comes back.
+    let offlineTimer = null;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        offlineTimer = setTimeout(() => db.goOffline(), 2 * 60 * 1000);
+      } else {
+        clearTimeout(offlineTimer);
+        db.goOnline();
+      }
+    });
+
+    // Share links: ?party=<id> opens that party's details once the data has loaded
+    let pendingSharedPartyId = new URLSearchParams(location.search).get('party');
+
+    function shareParty(partyId) {
+      const party = partiesData[partyId];
+      if (!party) return;
+      const url = `${location.origin}${location.pathname}?party=${encodeURIComponent(partyId)}`;
+      const text = `${party.name} is ${statusLabel(effectiveStatus(party))} on Drop the Addy`;
+      if (navigator.share) {
+        navigator.share({ title: 'Drop the Addy', text, url }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => alert('Link copied!'), () => prompt('Copy this link:', url));
+      } else {
+        prompt('Copy this link:', url);
+      }
+    }
+
     // Subscriptions stored locally in browser
     let subscribedPartyIds = JSON.parse(localStorage.getItem('subscribedPartyIds') || '[]');
 
@@ -523,6 +710,8 @@
 
       db.ref('proposals').off('value', onProposalsValue);
       db.ref('comments').off('value', onAdminCommentsValue);
+      db.ref('commentFlags').off('value', onAdminFlagsValue);
+      if (adminReportLogRef) { adminReportLogRef.off(); adminReportLogRef = null; }
       if (currentAdminUser) {
         const showAdminLoadError = (containerId, what) => (err) => {
           const container = document.getElementById(containerId);
@@ -532,6 +721,9 @@
         };
         db.ref('proposals').on('value', onProposalsValue, showAdminLoadError('adminProposalsList', 'proposals'));
         db.ref('comments').on('value', onAdminCommentsValue, showAdminLoadError('adminCommentsList', 'comments'));
+        db.ref('commentFlags').on('value', onAdminFlagsValue, () => {});
+        adminReportLogRef = db.ref('reportLog').orderByChild('at').startAt(serverNow() - 30 * DAY_MS);
+        adminReportLogRef.on('value', onAdminReportLogValue, showAdminLoadError('adminStats', 'stats'));
         migrateLegacyComments();
         if (navText) navText.textContent = 'Host Panel';
         if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
@@ -603,10 +795,16 @@
         }
       });
 
+      syncRecentReportListeners();
       renderUI();
       renderAdminLocationsList();
       updateModalVoteUI();
       if (currentAdminUser) migrateLegacyComments();
+
+      if (pendingSharedPartyId) {
+        if (partiesData[pendingSharedPartyId]) openPartyDetailsModal(pendingSharedPartyId);
+        pendingSharedPartyId = null;
+      }
     });
 
     // Listen for incoming party proposals (admins only; attached on sign-in)
@@ -638,21 +836,33 @@
         return;
       }
 
-      Object.entries(partiesData).forEach(([partyId, party]) => {
+      const entries = Object.entries(partiesData);
+      if (activeSort === 'CLOSE' && userCoords) {
+        entries.sort(([, a], [, b]) => partyDistance(a) - partyDistance(b));
+      } else if (activeSort === 'NEW') {
+        entries.sort(([, a], [, b]) => toCount(b.lastUpdatedAt) - toCount(a.lastUpdatedAt));
+      } else {
+        entries.sort(([aId, a], [bId, b]) => hotScore(bId, b) - hotScore(aId, a));
+      }
+
+      entries.forEach(([partyId, party]) => {
         const status = effectiveStatus(party);
         if (activeFilter === 'PARTY' && status !== 'ACTIVE PARTY') return;
         if (activeFilter === 'QUIET' && status !== 'QUIET') return;
 
         const isParty = status === 'ACTIVE PARTY';
-        const totalReports = toCount(party.crowdReportCount);
-        const avgCrowd = Math.min(totalReports > 0 ? Math.round(toCount(party.crowdTotalSum) / totalReports) : 0, 2000);
+        const avgCrowd = avgCrowdOf(party);
+        const recentReports = recentReportCount(partyId);
+        const updatedAgo = serverNow() - toCount(party.lastUpdatedAt);
+        const isStale = isParty && updatedAgo > STALE_AFTER_MS;
+        const distance = partyDistance(party);
         const upvotes = toCount(party.upvotes);
         const downvotes = toCount(party.downvotes);
         const quietCount = toCount(party.quietReportsCount);
         const myVote = getMyVote(partyId);
 
         const card = document.createElement('div');
-        card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 cursor-pointer transition`;
+        card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} ${isStale ? 'opacity-60' : ''} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 hover:opacity-100 cursor-pointer transition`;
         
         card.innerHTML = `
           <div class="js-open-details">
@@ -668,7 +878,10 @@
             <div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
               <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>
               <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdatedAt)}</span>
+              ${distance !== null ? `<span class="flex items-center gap-1">📍 ${distance < 10 ? distance.toFixed(1) : Math.round(distance)} mi</span>` : ''}
             </div>
+            ${recentReports > 0 ? `<p class="text-[10px] text-pink-300 font-medium mb-2">🔥 ${recentReports} report${recentReports === 1 ? '' : 's'} in the last hour</p>` : ''}
+            ${isStale ? `<p class="text-[10px] text-gray-400 font-medium mb-2">⏳ No updates for ${Math.floor(updatedAgo / HOUR_MS)}h, so this may be outdated</p>` : ''}
 
             ${isParty && quietCount > 0 && quietCount < 3 ? `<p class="text-[10px] text-amber-400 font-medium mb-2">💀 Dead reports: ${quietCount}/3 required</p>` : ''}
           </div>
@@ -702,7 +915,7 @@
 
       Object.entries(partiesData).forEach(([partyId, party]) => {
         const item = document.createElement('div');
-        item.className = 'bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 flex justify-between items-center gap-3';
+        item.className = 'bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 flex flex-wrap justify-between items-center gap-3';
         item.innerHTML = `
           <div>
             <div class="flex items-center gap-2">
@@ -713,10 +926,12 @@
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
           </div>
           <div class="flex items-center gap-2">
+            <button class="js-reset-votes px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Reset votes</button>
             <button class="js-edit px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
             <button class="js-delete px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
+        item.querySelector('.js-reset-votes').addEventListener('click', () => resetPartyVotes(partyId));
         item.querySelector('.js-edit').addEventListener('click', () => openAdminEditLocationModal(partyId));
         item.querySelector('.js-delete').addEventListener('click', () => handleAdminDeleteLocation(partyId));
         container.appendChild(item);
@@ -917,7 +1132,8 @@
           [`comments/${partyId}`]: null,
           [`votes/${partyId}`]: null,
           [`reportLocks/${partyId}`]: null,
-          [`quietVoters/${partyId}`]: null
+          [`quietVoters/${partyId}`]: null,
+          [`commentFlags/${partyId}`]: null
         });
       }
     }
@@ -996,6 +1212,10 @@
             updates[`quietVoters/${partyId}/${uid}`] = true;
             message = `Report received (${toCount(party.quietReportsCount) + 1}/3 needed to mark it 💀 Dead).`;
           }
+
+          updates[`reportLog/${db.ref('reportLog').push().key}`] = {
+            partyId, uid, type: statusType === 'quiet' ? 'dead' : 'party', at: TIMESTAMP
+          };
 
           return db.ref().update(updates).then(() => {
             alert(message);
@@ -1079,17 +1299,83 @@
     }
 
     function processSubscriptionToggle() {
-      const index = subscribedPartyIds.indexOf(selectedPartyId);
-      if (index > -1) {
-        subscribedPartyIds.splice(index, 1);
-        alert("Unsubscribed from party updates for this location.");
-      } else {
-        subscribedPartyIds.push(selectedPartyId);
-        alert("Subscribed! You will receive live browser notifications when this party status changes.");
-      }
+      const partyId = selectedPartyId;
+      const index = subscribedPartyIds.indexOf(partyId);
+      const subscribing = index === -1;
+      if (subscribing) subscribedPartyIds.push(partyId);
+      else subscribedPartyIds.splice(index, 1);
 
       localStorage.setItem('subscribedPartyIds', JSON.stringify(subscribedPartyIds));
       updateSubscriptionButtonUI();
+
+      syncPushSubscription(partyId, subscribing).then((pushWorks) => {
+        if (!subscribing) {
+          alert("Unsubscribed from party updates for this location.");
+        } else if (pushWorks) {
+          alert("Subscribed! You'll get a notification when this party's status changes, even when the site is closed.");
+        } else if (isIOS() && !isStandalone()) {
+          alert("Subscribed while this page is open. To get alerts when it's closed, tap Share → Add to Home Screen, open Drop the Addy from your home screen, and subscribe again.");
+        } else {
+          alert("Subscribed! You'll get a notification when this party's status changes while this site is open.");
+        }
+      });
+    }
+
+    // ---- Installable app + push notifications ----
+    const FCM_VAPID_KEY = "__FIREBASE_VAPID_KEY__";
+    const pushConfigured = FCM_VAPID_KEY.length > 20 && !FCM_VAPID_KEY.startsWith('__');
+    const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+    let swRegistration = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(reg => { swRegistration = reg; }).catch(err => console.warn('Service worker registration failed:', err));
+    }
+
+    function getPushToken() {
+      if (!pushConfigured || !swRegistration || !firebase.messaging) return Promise.resolve(null);
+      return Promise.resolve(firebase.messaging.isSupported())
+        .then(supported => supported
+          ? firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swRegistration })
+          : null)
+        .catch(err => { console.warn('Push setup failed:', err); return null; });
+    }
+
+    // Resolves true when this party's alerts will arrive by push even with the site closed
+    function syncPushSubscription(partyId, subscribed) {
+      return whenSignedIn()
+        .then(user => getPushToken().then(token => {
+          if (!token) return false;
+          return db.ref(`pushSubscriptions/${user.uid}`).update({
+            token,
+            updatedAt: TIMESTAMP,
+            [`parties/${partyId}`]: subscribed ? true : null
+          }).then(() => true);
+        }))
+        .catch(err => { console.warn('Push subscription failed:', err); return false; });
+    }
+
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      document.getElementById('installAppBtn').classList.remove('hidden');
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      document.getElementById('installAppBtn').classList.add('hidden');
+    });
+    if (isIOS() && !isStandalone()) {
+      document.addEventListener('DOMContentLoaded', () => document.getElementById('installAppBtn').classList.remove('hidden'));
+    }
+
+    function handleInstallClick() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.finally(() => { deferredInstallPrompt = null; });
+      } else {
+        alert('To install: tap the Share button in Safari, then "Add to Home Screen".');
+      }
     }
 
     function updateSubscriptionButtonUI() {
@@ -1109,7 +1395,7 @@
 
     function triggerBrowserNotification(title, body) {
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body: body, icon: 'https://unpkg.com/lucide-static@0.321.0/icons/radio.svg' });
+        new Notification(title, { body: body, icon: 'icons/icon-192.png' });
       }
     }
 
@@ -1143,72 +1429,222 @@
       });
     }
 
+    const FLAGS_TO_HIDE = 3;
     let commentsRef = null;
+    let flagsRef = null;
+    let modalComments = {};
+    let modalFlags = {};
+
     function loadPartyComments(partyId) {
       if (commentsRef) commentsRef.off();
+      if (flagsRef) flagsRef.off();
+      modalComments = {};
+      modalFlags = {};
       commentsRef = db.ref(`comments/${partyId}`).orderByChild('createdAt').limitToLast(100);
       commentsRef.on('value', (snapshot) => {
-        const commentsContainer = document.getElementById('modalCommentContainer');
-        commentsContainer.innerHTML = '';
+        modalComments = snapshot.val() || {};
+        renderModalComments(partyId);
+      });
+      flagsRef = db.ref(`commentFlags/${partyId}`);
+      flagsRef.on('value', (snapshot) => {
+        modalFlags = snapshot.val() || {};
+        renderModalComments(partyId);
+      }, () => {});
+    }
 
-        const commentsList = Object.entries(snapshot.val() || {}).sort(([, a], [, b]) => toCount(b.createdAt) - toCount(a.createdAt));
-        if (commentsList.length === 0) {
-          commentsContainer.innerHTML = '<p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>';
-          return;
-        }
+    function renderModalComments(partyId) {
+      const commentsContainer = document.getElementById('modalCommentContainer');
+      commentsContainer.innerHTML = '';
+      const myUid = auth.currentUser && auth.currentUser.uid;
 
-        commentsList.forEach(([commentId, comment]) => {
-          const commentDiv = document.createElement('div');
-          commentDiv.className = 'bg-gray-800/80 border border-gray-700/80 rounded-xl p-3 mb-2';
-          commentDiv.innerHTML = `
-            <p class="text-xs text-gray-200">${escapeHtml(comment.text)}</p>
-            <div class="flex justify-between items-center mt-1">
-              <span class="text-[10px] text-gray-500">${timeAgo(comment.createdAt)}</span>
+      const commentsList = Object.entries(modalComments)
+        .map(([commentId, comment]) => ({ commentId, comment, flags: Object.keys(modalFlags[commentId] || {}) }))
+        .filter(({ flags }) => currentAdminUser || flags.length < FLAGS_TO_HIDE)
+        .sort((a, b) => toCount(b.comment.createdAt) - toCount(a.comment.createdAt));
+
+      if (commentsList.length === 0) {
+        commentsContainer.innerHTML = '<p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>';
+        return;
+      }
+
+      commentsList.forEach(({ commentId, comment, flags }) => {
+        const iFlagged = myUid && flags.includes(myUid);
+        const commentDiv = document.createElement('div');
+        commentDiv.className = `bg-gray-800/80 border ${flags.length >= FLAGS_TO_HIDE ? 'border-red-500/60' : 'border-gray-700/80'} rounded-xl p-3 mb-2`;
+        commentDiv.innerHTML = `
+          <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
+          <div class="flex justify-between items-center mt-1 gap-2">
+            <span class="text-[10px] text-gray-500">${timeAgo(comment.createdAt)}${currentAdminUser && flags.length ? ` • <span class="text-red-400">🚩 ${flags.length} flag${flags.length === 1 ? '' : 's'}${flags.length >= FLAGS_TO_HIDE ? ' (hidden from visitors)' : ''}</span>` : ''}</span>
+            <div class="flex items-center gap-3">
+              ${iFlagged ? '<span class="text-[10px] text-gray-500">🚩 Flagged</span>' : '<button class="js-flag-comment text-[10px] text-gray-500 hover:text-red-400">🚩 Flag</button>'}
               ${currentAdminUser ? '<button class="js-delete-comment text-[10px] text-red-400 hover:underline">Delete</button>' : ''}
             </div>
-          `;
-          const deleteBtn = commentDiv.querySelector('.js-delete-comment');
-          if (deleteBtn) deleteBtn.addEventListener('click', () => deleteComment(partyId, commentId));
-          commentsContainer.appendChild(commentDiv);
-        });
+          </div>
+        `;
+        const flagBtn = commentDiv.querySelector('.js-flag-comment');
+        if (flagBtn) flagBtn.addEventListener('click', () => flagComment(partyId, commentId));
+        const deleteBtn = commentDiv.querySelector('.js-delete-comment');
+        if (deleteBtn) deleteBtn.addEventListener('click', () => deleteComment(partyId, commentId));
+        commentsContainer.appendChild(commentDiv);
       });
+    }
+
+    function flagComment(partyId, commentId) {
+      if (!confirm('Flag this comment as inappropriate? Comments flagged by 3 people are hidden until a host reviews them.')) return;
+      whenSignedIn()
+        .then(user => db.ref(`commentFlags/${partyId}/${commentId}/${user.uid}`).set(true))
+        .catch(err => alert('Could not flag comment: ' + err.message));
     }
 
     function deleteComment(partyId, commentId) {
       if (!confirm('Delete this comment?')) return;
-      db.ref(`comments/${partyId}/${commentId}`).remove().catch(err => alert('Delete failed: ' + err.message));
+      db.ref().update({
+        [`comments/${partyId}/${commentId}`]: null,
+        [`commentFlags/${partyId}/${commentId}`]: null
+      }).catch(err => alert('Delete failed: ' + err.message));
     }
 
-    // Host panel: newest comments across every party, with delete buttons
+    function clearCommentFlags(partyId, commentId) {
+      db.ref(`commentFlags/${partyId}/${commentId}`).remove().catch(err => alert('Could not clear flags: ' + err.message));
+    }
+
+    // Host panel: flagged comments first, then the newest, with delete buttons
+    let adminCommentsData = {};
+    let adminFlagsData = {};
     function onAdminCommentsValue(snapshot) {
+      adminCommentsData = snapshot.val() || {};
+      renderAdminComments();
+    }
+    function onAdminFlagsValue(snapshot) {
+      adminFlagsData = snapshot.val() || {};
+      renderAdminComments();
+    }
+
+    function renderAdminComments() {
       const container = document.getElementById('adminCommentsList');
       if (!container) return;
       container.innerHTML = '';
 
       const all = [];
-      Object.entries(snapshot.val() || {}).forEach(([partyId, comments]) => {
-        Object.entries(comments || {}).forEach(([commentId, comment]) => all.push({ partyId, commentId, comment }));
+      Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
+        Object.entries(comments || {}).forEach(([commentId, comment]) => {
+          const flagCount = Object.keys((adminFlagsData[partyId] || {})[commentId] || {}).length;
+          all.push({ partyId, commentId, comment, flagCount });
+        });
       });
-      all.sort((a, b) => toCount(b.comment.createdAt) - toCount(a.comment.createdAt));
+      all.sort((a, b) => (b.flagCount - a.flagCount) || (toCount(b.comment.createdAt) - toCount(a.comment.createdAt)));
 
       if (all.length === 0) {
         container.innerHTML = '<p class="text-xs text-gray-500 italic">No comments yet.</p>';
         return;
       }
 
-      all.slice(0, 50).forEach(({ partyId, commentId, comment }) => {
+      all.slice(0, 50).forEach(({ partyId, commentId, comment, flagCount }) => {
         const item = document.createElement('div');
-        item.className = 'bg-gray-900/80 border border-gray-700 rounded-xl p-3 flex justify-between items-start gap-3';
+        item.className = `bg-gray-900/80 border ${flagCount >= FLAGS_TO_HIDE ? 'border-red-500/60' : flagCount ? 'border-amber-500/40' : 'border-gray-700'} rounded-xl p-3 flex justify-between items-start gap-3`;
         item.innerHTML = `
           <div class="min-w-0">
             <span class="text-[10px] text-purple-400 font-semibold">${escapeHtml(partiesData[partyId] ? partiesData[partyId].name : partyId)} • ${timeAgo(comment.createdAt)}</span>
+            ${flagCount ? `<span class="text-[10px] text-red-400 font-semibold"> • 🚩 ${flagCount} flag${flagCount === 1 ? '' : 's'}${flagCount >= FLAGS_TO_HIDE ? ' (hidden)' : ''}</span>` : ''}
             <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
           </div>
-          <button class="js-delete-comment shrink-0 px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
+          <div class="flex flex-col gap-1 shrink-0">
+            <button class="js-delete-comment px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
+            ${flagCount ? '<button class="js-keep-comment px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Keep</button>' : ''}
+          </div>
         `;
         item.querySelector('.js-delete-comment').addEventListener('click', () => deleteComment(partyId, commentId));
+        const keepBtn = item.querySelector('.js-keep-comment');
+        if (keepBtn) keepBtn.addEventListener('click', () => clearCommentFlags(partyId, commentId));
         container.appendChild(item);
       });
+    }
+
+    // ---- Admin stats (from reportLog) ----
+    let adminReportLogRef = null;
+    function onAdminReportLogValue(snapshot) {
+      const container = document.getElementById('adminStats');
+      if (!container) return;
+      const now = serverNow();
+      const logs = Object.values(snapshot.val() || {}).filter(l => l && toCount(l.at) > 0);
+      const week = logs.filter(l => now - l.at < 7 * DAY_MS);
+
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const perDay = [];
+      for (let i = 6; i >= 0; i--) {
+        const day = new Date(now - i * DAY_MS);
+        const key = day.toDateString();
+        perDay.push({ label: `${dayNames[day.getDay()]} ${day.getMonth() + 1}/${day.getDate()}`, count: week.filter(l => new Date(l.at).toDateString() === key).length });
+      }
+      const maxDay = Math.max(1, ...perDay.map(d => d.count));
+
+      const weekdayCounts = dayNames.map((name, i) => ({ name, count: logs.filter(l => new Date(l.at).getDay() === i).length }));
+      const busiest = weekdayCounts.reduce((a, b) => (b.count > a.count ? b : a));
+
+      const byParty = {};
+      logs.forEach(l => { byParty[l.partyId] = (byParty[l.partyId] || 0) + 1; });
+      const topParties = Object.entries(byParty).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+      const tile = (label, value) => `<div class="bg-gray-900/80 border border-gray-700 rounded-lg p-2.5"><p class="text-[10px] text-gray-500">${label}</p><p class="text-base font-bold text-white">${value}</p></div>`;
+      container.innerHTML = `
+        <div class="grid grid-cols-3 gap-2">
+          ${tile('Reports (7 days)', week.length)}
+          ${tile('Unique reporters (7 days)', new Set(week.map(l => l.uid)).size)}
+          ${tile('Busiest night (30 days)', busiest.count ? busiest.name : '–')}
+        </div>
+        <div>
+          <p class="text-[10px] text-gray-500 mb-1">Reports per day</p>
+          ${perDay.map(d => `
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="w-16 shrink-0 text-[10px] text-gray-400">${d.label}</span>
+              <div class="flex-1 bg-gray-900 rounded h-3"><div class="bg-emerald-500/70 h-3 rounded" style="width:${(d.count / maxDay) * 100}%"></div></div>
+              <span class="w-6 text-right text-[10px] text-gray-300">${d.count}</span>
+            </div>`).join('')}
+        </div>
+        <div>
+          <p class="text-[10px] text-gray-500 mb-1">Most reported locations (30 days)</p>
+          ${topParties.length ? topParties.map(([pid, count]) => `<p class="text-xs"><span class="text-white">${escapeHtml(partiesData[pid] ? partiesData[pid].name : pid)}</span> <span class="text-gray-500">· ${count} report${count === 1 ? '' : 's'}</span></p>`).join('') : '<p class="text-gray-500 italic">No reports yet.</p>'}
+        </div>
+      `;
+    }
+
+    // ---- Admin cleanup tools ----
+    function resetPartyVotes(partyId) {
+      const party = partiesData[partyId];
+      if (!party || !confirm(`Reset all votes on "${party.name}" to 0?`)) return;
+      db.ref().update({
+        [`parties/${partyId}/upvotes`]: 0,
+        [`parties/${partyId}/downvotes`]: 0,
+        [`votes/${partyId}`]: null
+      }).then(() => alert('Votes reset.'), err => alert('Reset failed: ' + err.message));
+    }
+
+    function deleteOldComments() {
+      const cutoff = serverNow() - 7 * DAY_MS;
+      const updates = {};
+      Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
+        Object.entries(comments || {}).forEach(([commentId, comment]) => {
+          if (toCount(comment.createdAt) < cutoff) {
+            updates[`comments/${partyId}/${commentId}`] = null;
+            updates[`commentFlags/${partyId}/${commentId}`] = null;
+          }
+        });
+      });
+      const count = Object.keys(updates).length / 2;
+      if (count === 0) { alert('No comments older than 7 days.'); return; }
+      if (!confirm(`Delete ${count} comment${count === 1 ? '' : 's'} older than 7 days?`)) return;
+      db.ref().update(updates).then(() => alert('Old comments deleted.'), err => alert('Delete failed: ' + err.message));
+    }
+
+    function clearOldReportHistory() {
+      db.ref('reportLog').orderByChild('at').endAt(serverNow() - 30 * DAY_MS).once('value').then((snap) => {
+        const updates = {};
+        snap.forEach(child => { updates[`reportLog/${child.key}`] = null; });
+        const count = Object.keys(updates).length;
+        if (count === 0) { alert('No report history older than 30 days.'); return; }
+        if (!confirm(`Clear ${count} report${count === 1 ? '' : 's'} older than 30 days from the stats history?`)) return;
+        return db.ref().update(updates).then(() => alert('Old report history cleared.'));
+      }).catch(err => alert('Clear failed: ' + err.message));
     }
 
     // One-time move of comments stored under parties/{id}/comments into comments/{id}
@@ -1251,6 +1687,10 @@
       if (commentsRef) {
         commentsRef.off();
         commentsRef = null;
+      }
+      if (flagsRef) {
+        flagsRef.off();
+        flagsRef = null;
       }
       document.getElementById('partyDetailsModal').classList.add('hidden');
       selectedPartyId = null;
