@@ -69,25 +69,27 @@
   <!-- Main Directory Container -->
   <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full">
     <!-- Controls & Search -->
-    <div class="flex flex-col sm:flex-row gap-4 mb-8 justify-between items-center">
-      <div class="relative w-full sm:w-80">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        <input type="text" id="searchInput" oninput="filterParties()" placeholder="Search party or location..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition">
+    <div class="flex flex-col sm:flex-row gap-4 mb-8 justify-between items-center sm:items-start">
+      <div class="w-full sm:w-80 space-y-2">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input type="text" id="searchInput" oninput="filterParties()" placeholder="Search party or location..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition">
+        </div>
+        <div class="flex gap-2 items-center">
+          <label for="sortSelect" class="text-xs text-gray-500 shrink-0">Sort by</label>
+          <select id="sortSelect" onchange="setSort(this.value)" class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+            <option value="HOT">🔥 Hottest</option>
+            <option value="CLOSE">📍 Closest</option>
+            <option value="NEW">🕒 Newest</option>
+          </select>
+          <button onclick="requestUserLocation()" id="nearMeBtn" class="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">📍 Near me</button>
+        </div>
       </div>
       <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
         <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-purple-600 text-white transition">All</button>
         <button onclick="setFilter('PARTY')" id="filter-PARTY" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">🎉 Party Time</button>
         <button onclick="setFilter('QUIET')" id="filter-QUIET" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">💀 Dead</button>
       </div>
-    </div>
-    <div class="flex flex-wrap gap-2 -mt-4 mb-8 justify-center sm:justify-end items-center">
-      <label for="sortSelect" class="text-xs text-gray-500">Sort by</label>
-      <select id="sortSelect" onchange="setSort(this.value)" class="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
-        <option value="HOT">🔥 Hottest</option>
-        <option value="CLOSE">📍 Closest</option>
-        <option value="NEW">🕒 Newest</option>
-      </select>
-      <button onclick="requestUserLocation()" id="nearMeBtn" class="px-3 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">📍 Near me</button>
     </div>
 
     <!-- View Container: Grid View -->
