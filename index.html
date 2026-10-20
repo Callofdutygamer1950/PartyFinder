@@ -6,14 +6,12 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; connect-src 'self' https: wss:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:;">
   <title>Drop the Addy</title>
   
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@1.49.0/dist/umd/lucide.min.js" integrity="sha384-7mWwAGEOOlxvEBR+Mpy0eVhGL+9abGHkZtVoTs+dvrWkI5g00lyMaAxRIK+rqXGt" crossorigin="anonymous"></script>
 
   <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Leaflet Heatmap Plugin -->
-  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen font-sans flex flex-col justify-between">
 
@@ -70,8 +68,8 @@
       </div>
       <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
         <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-purple-600 text-white transition">All</button>
-        <button onclick="setFilter('PARTY')" id="filter-PARTY" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">Active Parties</button>
-        <button onclick="setFilter('QUIET')" id="filter-QUIET" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">Quiet Parties</button>
+        <button onclick="setFilter('PARTY')" id="filter-PARTY" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">🎉 Party Time</button>
+        <button onclick="setFilter('QUIET')" id="filter-QUIET" class="filter-btn px-4 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">💀 Dead</button>
       </div>
     </div>
 
@@ -84,8 +82,8 @@
         <div id="campusMap" class="w-full h-[500px] z-10"></div>
         <div class="absolute bottom-4 left-4 z-20 bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-xl p-3 text-xs text-gray-300 space-y-1">
           <p class="font-bold text-white mb-1">Map Legend</p>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Active Party</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500 inline-block"></span> Quiet Location</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Party Time</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500 inline-block"></span> Dead</div>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-800 border border-gray-600 inline-block"></span> Outside 3-Mi Zone</div>
         </div>
       </div>
@@ -109,11 +107,11 @@
           <div class="grid grid-cols-2 gap-3">
             <label class="border border-gray-700 bg-gray-800/50 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-emerald-500 transition">
               <input type="radio" name="statusType" value="party" required class="text-purple-600 focus:ring-0">
-              <span class="text-xs font-semibold text-emerald-400">🎉 Active Party</span>
+              <span class="text-xs font-semibold text-emerald-400">🎉 Party Time</span>
             </label>
             <label class="border border-gray-700 bg-gray-800/50 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:border-gray-500 transition">
               <input type="radio" name="statusType" value="quiet" required class="text-purple-600 focus:ring-0">
-              <span class="text-xs font-semibold text-gray-400">🤫 Quiet / No Party (Requires 3 reports)</span>
+              <span class="text-xs font-semibold text-gray-400">💀 Dead (Requires 3 reports)</span>
             </label>
           </div>
         </div>
@@ -349,6 +347,16 @@
           </div>
         </div>
 
+        <!-- Comment Moderation -->
+        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+          <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <i data-lucide="message-square" class="w-4 h-4"></i> Moderate Comments
+          </h3>
+          <div id="adminCommentsList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <p class="text-xs text-gray-500 italic">No comments yet.</p>
+          </div>
+        </div>
+
         <!-- Fundraiser Goal Editor -->
         <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
           <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Manage iOS App Fundraiser</h3>
@@ -393,8 +401,8 @@
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Admin Status Override</label>
           <select id="editPartyStatus" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
-            <option value="ACTIVE PARTY">🎉 ACTIVE PARTY</option>
-            <option value="QUIET">🤫 QUIET (Immediate Admin Override)</option>
+            <option value="ACTIVE PARTY">🎉 Party Time</option>
+            <option value="QUIET">💀 Dead (Immediate Admin Override)</option>
           </select>
         </div>
         <div class="grid grid-cols-2 gap-2">
@@ -444,7 +452,26 @@
     let tempPickerMarker = null;
     let isSelectingLocation = false;
     let mapMarkers = [];
-    let currentAdminUser = null;
+    let currentAdminUser = null; // signed-in host account; anonymous visitors are never admins
+    let serverTimeOffset = 0;
+    let resolveAuthReady;
+    const authReady = new Promise(resolve => { resolveAuthReady = resolve; });
+
+    const REPORT_COOLDOWN_MS = 15 * 60 * 1000;
+    const DEAD_AFTER_MS = 6 * 60 * 60 * 1000;
+    const TIMESTAMP = firebase.database.ServerValue.TIMESTAMP;
+    const increment = (n) => firebase.database.ServerValue.increment(n);
+
+    db.ref('.info/serverTimeOffset').on('value', (snap) => { serverTimeOffset = snap.val() || 0; });
+    const serverNow = () => Date.now() + serverTimeOffset;
+
+    // A party is only "Party Time" while it keeps getting reports; 6 hours of silence means Dead
+    function effectiveStatus(party) {
+      if (!party || party.status !== 'ACTIVE PARTY') return 'QUIET';
+      const updatedAt = Number(party.lastUpdatedAt);
+      return Number.isFinite(updatedAt) && serverNow() - updatedAt < DEAD_AFTER_MS ? 'ACTIVE PARTY' : 'QUIET';
+    }
+    function statusLabel(status) { return status === 'ACTIVE PARTY' ? '🎉 Party Time' : '💀 Dead'; }
 
     // Subscriptions stored locally in browser
     let subscribedPartyIds = JSON.parse(localStorage.getItem('subscribedPartyIds') || '[]');
@@ -468,15 +495,29 @@
       });
     }
 
-    // Auth State Tracking
+    // Auth State Tracking: every visitor gets a silent anonymous account so the rules can rate-limit per user
     auth.onAuthStateChanged((user) => {
-      currentAdminUser = user;
+      if (!user) {
+        auth.signInAnonymously().catch(err => console.error('Anonymous sign-in failed:', err));
+      } else {
+        resolveAuthReady();
+      }
+      currentAdminUser = user && !user.isAnonymous ? user : null;
       const navText = document.getElementById('adminNavText');
       const navIcon = document.getElementById('adminNavIcon');
 
       db.ref('proposals').off('value', onProposalsValue);
-      if (user) {
-        db.ref('proposals').on('value', onProposalsValue, () => renderAdminProposalsList({}));
+      db.ref('comments').off('value', onAdminCommentsValue);
+      if (currentAdminUser) {
+        const showAdminLoadError = (containerId, what) => (err) => {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          container.innerHTML = '<p class="text-xs text-red-400"></p>';
+          container.firstChild.textContent = `Can't load ${what} (${err.message}). Check that /admins/${currentAdminUser.uid} is set to boolean true in the database.`;
+        };
+        db.ref('proposals').on('value', onProposalsValue, showAdminLoadError('adminProposalsList', 'proposals'));
+        db.ref('comments').on('value', onAdminCommentsValue, showAdminLoadError('adminCommentsList', 'comments'));
+        migrateLegacyComments();
         if (navText) navText.textContent = 'Host Panel';
         if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
       } else {
@@ -485,6 +526,7 @@
         renderAdminProposalsList({});
         closeHostModal();
       }
+      if (selectedPartyId) loadPartyComments(selectedPartyId);
 
       if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
@@ -537,10 +579,10 @@
       Object.values(partiesData).forEach(newParty => {
         const prevParty = oldData[newParty.id];
         if (prevParty && subscribedPartyIds.includes(newParty.id)) {
-          if (prevParty.status !== newParty.status) {
+          if (effectiveStatus(prevParty) !== effectiveStatus(newParty)) {
             triggerBrowserNotification(
               `Party Update: ${newParty.name}`,
-              `Status changed to ${newParty.status}!`
+              `Status changed to ${statusLabel(effectiveStatus(newParty))}!`
             );
           }
         }
@@ -549,6 +591,7 @@
       renderUI();
       renderAdminLocationsList();
       updateModalVoteUI();
+      if (currentAdminUser) migrateLegacyComments();
     });
 
     // Listen for incoming party proposals (admins only; attached on sign-in)
@@ -581,10 +624,11 @@
       }
 
       Object.entries(partiesData).forEach(([partyId, party]) => {
-        if (activeFilter === 'PARTY' && party.status !== 'ACTIVE PARTY') return;
-        if (activeFilter === 'QUIET' && party.status !== 'QUIET') return;
+        const status = effectiveStatus(party);
+        if (activeFilter === 'PARTY' && status !== 'ACTIVE PARTY') return;
+        if (activeFilter === 'QUIET' && status !== 'QUIET') return;
 
-        const isParty = party.status === 'ACTIVE PARTY';
+        const isParty = status === 'ACTIVE PARTY';
         const totalReports = toCount(party.crowdReportCount);
         const avgCrowd = Math.min(totalReports > 0 ? Math.round(toCount(party.crowdTotalSum) / totalReports) : 0, 2000);
         const upvotes = toCount(party.upvotes);
@@ -602,16 +646,16 @@
                 <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
                 ${party.isPermanent ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-purple-900/60 text-purple-300 border border-purple-500/30 font-semibold">Staple</span>` : ''}
               </div>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${escapeHtml(party.status)}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${statusLabel(status)}</span>
             </div>
             ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
             
             <div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
               <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>
-              <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdated)}</span>
+              <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdatedAt)}</span>
             </div>
 
-            ${quietCount > 0 && quietCount < 3 ? `<p class="text-[10px] text-amber-400 font-medium mb-2">🤫 Quiet Reports: ${quietCount}/3 required</p>` : ''}
+            ${isParty && quietCount > 0 && quietCount < 3 ? `<p class="text-[10px] text-amber-400 font-medium mb-2">💀 Dead reports: ${quietCount}/3 required</p>` : ''}
           </div>
 
           <!-- Upvote / Downvote Inline Bar -->
@@ -649,7 +693,7 @@
             <div class="flex items-center gap-2">
               <span class="font-bold text-white text-xs">${escapeHtml(party.name)}</span>
               ${party.isPermanent ? `<span class="text-[9px] text-purple-400 font-semibold">(Permanent Staple)</span>` : ''}
-              <span class="text-[10px] px-2 py-0.5 rounded ${party.status === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${escapeHtml(party.status)}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded ${effectiveStatus(party) === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${statusLabel(effectiveStatus(party))}</span>
             </div>
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
           </div>
@@ -725,6 +769,10 @@
         return;
       }
 
+      authReady.then(() => submitProposal(name, location, lat, lng));
+    }
+
+    function submitProposal(name, location, lat, lng) {
       const newProposalRef = db.ref('proposals').push();
       const proposalData = {
         id: newProposalRef.key,
@@ -771,7 +819,7 @@
           quietReportsCount: 0,
           upvotes: 0,
           downvotes: 0,
-          lastUpdated: new Date().toISOString()
+          lastUpdatedAt: TIMESTAMP
         };
 
         const updates = {};
@@ -834,9 +882,10 @@
         lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
         isPermanent: existing.isPermanent || false,
         quietReportsCount: newStatus === 'QUIET' ? 0 : (existing.quietReportsCount || 0),
-        lastUpdated: new Date().toISOString()
+        lastUpdatedAt: TIMESTAMP
       };
 
+      if (newStatus === 'QUIET') db.ref(`quietVoters/${id}`).remove();
       db.ref(`parties/${id}`).update(updated, (err) => {
         if (!err) {
           closeAdminEditLocationModal();
@@ -848,7 +897,13 @@
     function handleAdminDeleteLocation(partyId) {
       const party = partiesData[partyId];
       if (confirm(`Are you sure you want to delete "${party ? party.name : 'this location'}"?`)) {
-        db.ref(`parties/${partyId}`).remove();
+        db.ref().update({
+          [`parties/${partyId}`]: null,
+          [`comments/${partyId}`]: null,
+          [`votes/${partyId}`]: null,
+          [`reportLocks/${partyId}`]: null,
+          [`quietVoters/${partyId}`]: null
+        });
       }
     }
 
@@ -861,7 +916,8 @@
       });
     }
 
-    // Status Report Handler with 1-Hour Cooldown & 3-Quiet-Reports Rule
+    // Status Report Handler: 15-minute cooldown per visitor (enforced by the database rules),
+    // 3 different visitors to mark a party Dead, and no limits for signed-in admins
     function handleStatusSubmit(e) {
       e.preventDefault();
       const partyId = document.getElementById('reportPartySelect').value;
@@ -871,55 +927,67 @@
       const party = partiesData[partyId];
       if (!party) return;
 
-      // Rate Limit Check: 1 vote/report per session per hour
-      const lastReportTime = sessionStorage.getItem(`last_report_${partyId}`);
-      const NOW = Date.now();
-      const ONE_HOUR = 60 * 60 * 1000;
+      authReady.then(() => {
+        const uid = auth.currentUser.uid;
+        const isAdmin = !!currentAdminUser;
+        const checks = isAdmin ? Promise.resolve([]) : Promise.all([
+          db.ref(`reportLocks/${partyId}/${uid}`).once('value'),
+          db.ref(`quietVoters/${partyId}/${uid}`).once('value')
+        ]);
 
-      if (lastReportTime && (NOW - parseInt(lastReportTime)) < ONE_HOUR) {
-        const remainingMinutes = Math.ceil((ONE_HOUR - (NOW - parseInt(lastReportTime))) / (60 * 1000));
-        alert(`Rate Limit: You have already submitted a status update for "${party.name}". Please wait ${remainingMinutes} minute(s) before updating again.`);
-        return;
-      }
+        return checks.then(([lockSnap, voterSnap]) => {
+          if (lockSnap && lockSnap.exists()) {
+            const waitMs = REPORT_COOLDOWN_MS - (serverNow() - lockSnap.val());
+            if (waitMs > 0) {
+              alert(`You already updated "${party.name}" recently. Please wait ${Math.ceil(waitMs / 60000)} minute(s) before updating it again.`);
+              return;
+            }
+          }
 
-      const partyRef = db.ref(`parties/${partyId}`);
-      const updates = {
-        lastUpdated: new Date().toISOString()
-      };
+          const p = `parties/${partyId}`;
+          const updates = { [`reportLocks/${partyId}/${uid}`]: TIMESTAMP };
+          if (headcountInput > 0) {
+            updates[`${p}/crowdReportCount`] = increment(1);
+            updates[`${p}/crowdTotalSum`] = increment(Math.min(headcountInput, 2000));
+          }
 
-      if (headcountInput > 0) {
-        updates.crowdReportCount = firebase.database.ServerValue.increment(1);
-        updates.crowdTotalSum = firebase.database.ServerValue.increment(Math.min(headcountInput, 2000));
-      }
+          let message;
+          const markDead = () => {
+            updates[`${p}/status`] = 'QUIET';
+            updates[`${p}/quietReportsCount`] = 0;
+            updates[`${p}/lastUpdatedAt`] = TIMESTAMP;
+            updates[`quietVoters/${partyId}`] = null;
+            message = `"${party.name}" is now marked 💀 Dead.`;
+          };
 
-      const finishReport = (alertMessage) => {
-        sessionStorage.setItem(`last_report_${partyId}`, NOW.toString());
-        alert(alertMessage);
-        document.getElementById('reportForm').reset();
-      };
+          if (statusType !== 'quiet') {
+            updates[`${p}/status`] = 'ACTIVE PARTY';
+            updates[`${p}/quietReportsCount`] = 0;
+            updates[`${p}/lastUpdatedAt`] = TIMESTAMP;
+            updates[`quietVoters/${partyId}`] = null;
+            message = `"${party.name}" is now 🎉 Party Time!`;
+          } else if (isAdmin) {
+            markDead();
+          } else if (effectiveStatus(party) === 'QUIET') {
+            alert(`"${party.name}" is already marked 💀 Dead.`);
+            return;
+          } else if (voterSnap.exists()) {
+            alert(`You already reported "${party.name}" as dead. It needs reports from 3 different people.`);
+            return;
+          } else if (toCount(party.quietReportsCount) >= 2) {
+            markDead();
+          } else {
+            updates[`${p}/quietReportsCount`] = increment(1);
+            updates[`quietVoters/${partyId}/${uid}`] = true;
+            message = `Report received (${toCount(party.quietReportsCount) + 1}/3 needed to mark it 💀 Dead).`;
+          }
 
-      if (statusType !== 'quiet') { // Active Party Report
-        updates.status = 'ACTIVE PARTY';
-        updates.quietReportsCount = 0; // Reset quiet counter on active report
-        partyRef.update(updates, (err) => {
-          if (!err) finishReport(`Status for "${party.name}" updated to ACTIVE PARTY!`);
-        });
-        return;
-      }
-
-      // Quiet report: count atomically, then flip to QUIET once the 3rd report lands
-      partyRef.update(updates);
-      partyRef.child('quietReportsCount').transaction(current => toCount(current) + 1, (err, committed, snapshot) => {
-        if (err || !committed) return;
-        const quietCount = toCount(snapshot.val());
-        if (quietCount >= 3) {
-          partyRef.update({ status: 'QUIET', quietReportsCount: 0, lastUpdated: new Date().toISOString() }, (err2) => {
-            if (!err2) finishReport(`3 Quiet reports reached! "${party.name}" is now marked QUIET.`);
+          return db.ref().update(updates).then(() => {
+            alert(message);
+            document.getElementById('reportForm').reset();
           });
-        } else {
-          finishReport(`Report received (${quietCount}/3 required to mark quiet).`);
-        }
-      });
+        });
+      }).catch(err => alert('Could not post your report: ' + err.message));
     }
 
     // Upvote / Downvote: one vote per party per browser; picking the other option switches the vote
@@ -931,28 +999,39 @@
       const party = partiesData[partyId];
       if (!party) return;
 
-      const previous = getMyVote(partyId);
-      if (previous === voteType) return;
+      authReady.then(() => {
+        const uid = auth.currentUser.uid;
+        return db.ref(`votes/${partyId}/${uid}`).once('value').then((snap) => {
+          const previous = snap.val();
+          if (previous === voteType) {
+            localStorage.setItem(`vote_${partyId}`, voteType);
+            renderUI();
+            updateModalVoteUI();
+            return;
+          }
 
-      const field = voteType === 'up' ? 'upvotes' : 'downvotes';
-      const updates = { [field]: firebase.database.ServerValue.increment(1) };
-      if (previous) {
-        const prevField = previous === 'up' ? 'upvotes' : 'downvotes';
-        if (toCount(party[prevField]) > 0) updates[prevField] = firebase.database.ServerValue.increment(-1);
-      }
+          const field = voteType === 'up' ? 'upvotes' : 'downvotes';
+          const updates = {
+            [`votes/${partyId}/${uid}`]: voteType,
+            [`parties/${partyId}/${field}`]: increment(1)
+          };
+          if (previous) {
+            const prevField = previous === 'up' ? 'upvotes' : 'downvotes';
+            if (toCount(party[prevField]) > 0) updates[`parties/${partyId}/${prevField}`] = increment(-1);
+          }
 
-      // Save the choice first so the re-render triggered by this write shows it highlighted
-      localStorage.setItem(`vote_${partyId}`, voteType);
-      sessionStorage.removeItem(`voted_${partyId}`);
-      db.ref(`parties/${partyId}`).update(updates, (err) => {
-        if (err) {
-          if (previous) localStorage.setItem(`vote_${partyId}`, previous);
-          else localStorage.removeItem(`vote_${partyId}`);
-          renderUI();
-          updateModalVoteUI();
-          alert('Vote failed: ' + err.message);
-        }
-      });
+          // Save the choice first so the re-render triggered by this write shows it highlighted
+          localStorage.setItem(`vote_${partyId}`, voteType);
+          sessionStorage.removeItem(`voted_${partyId}`);
+          return db.ref().update(updates).catch((err) => {
+            if (previous) localStorage.setItem(`vote_${partyId}`, previous);
+            else localStorage.removeItem(`vote_${partyId}`);
+            renderUI();
+            updateModalVoteUI();
+            throw err;
+          });
+        });
+      }).catch(err => alert('Vote failed: ' + err.message));
     }
 
     function updateModalVoteUI() {
@@ -1038,26 +1117,108 @@
         return;
       }
 
-      const newCommentRef = db.ref(`parties/${selectedPartyId}/comments`).push();
-      const messageId = newCommentRef.key;
-
-      const commentData = {
-        messageId: messageId,
-        text: commentText,
-        timestamp: new Date().toISOString()
-      };
-
-      newCommentRef.set(commentData, (error) => {
-        if (error) {
-          alert('Failed to post comment: ' + error.message);
-        } else {
-          input.value = '';
-          db.ref(`parties/${selectedPartyId}`).update({
-            latestComment: commentText,
-            commentTimestamp: commentData.timestamp
-          });
-        }
+      const partyId = selectedPartyId;
+      authReady.then(() => {
+        const commentId = db.ref(`comments/${partyId}`).push().key;
+        return db.ref().update({
+          [`comments/${partyId}/${commentId}`]: { text: commentText, createdAt: TIMESTAMP },
+          [`commentLocks/${auth.currentUser.uid}`]: TIMESTAMP
+        });
+      }).then(() => {
+        input.value = '';
+      }).catch((error) => {
+        alert(error.code === 'PERMISSION_DENIED'
+          ? 'Please wait 20 seconds between comments.'
+          : 'Failed to post comment: ' + error.message);
       });
+    }
+
+    let commentsRef = null;
+    function loadPartyComments(partyId) {
+      if (commentsRef) commentsRef.off();
+      commentsRef = db.ref(`comments/${partyId}`).orderByChild('createdAt').limitToLast(100);
+      commentsRef.on('value', (snapshot) => {
+        const commentsContainer = document.getElementById('modalCommentContainer');
+        commentsContainer.innerHTML = '';
+
+        const commentsList = Object.entries(snapshot.val() || {}).sort(([, a], [, b]) => toCount(b.createdAt) - toCount(a.createdAt));
+        if (commentsList.length === 0) {
+          commentsContainer.innerHTML = '<p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>';
+          return;
+        }
+
+        commentsList.forEach(([commentId, comment]) => {
+          const commentDiv = document.createElement('div');
+          commentDiv.className = 'bg-gray-800/80 border border-gray-700/80 rounded-xl p-3 mb-2';
+          commentDiv.innerHTML = `
+            <p class="text-xs text-gray-200">${escapeHtml(comment.text)}</p>
+            <div class="flex justify-between items-center mt-1">
+              <span class="text-[10px] text-gray-500">${timeAgo(comment.createdAt)}</span>
+              ${currentAdminUser ? '<button class="js-delete-comment text-[10px] text-red-400 hover:underline">Delete</button>' : ''}
+            </div>
+          `;
+          const deleteBtn = commentDiv.querySelector('.js-delete-comment');
+          if (deleteBtn) deleteBtn.addEventListener('click', () => deleteComment(partyId, commentId));
+          commentsContainer.appendChild(commentDiv);
+        });
+      });
+    }
+
+    function deleteComment(partyId, commentId) {
+      if (!confirm('Delete this comment?')) return;
+      db.ref(`comments/${partyId}/${commentId}`).remove().catch(err => alert('Delete failed: ' + err.message));
+    }
+
+    // Host panel: newest comments across every party, with delete buttons
+    function onAdminCommentsValue(snapshot) {
+      const container = document.getElementById('adminCommentsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const all = [];
+      Object.entries(snapshot.val() || {}).forEach(([partyId, comments]) => {
+        Object.entries(comments || {}).forEach(([commentId, comment]) => all.push({ partyId, commentId, comment }));
+      });
+      all.sort((a, b) => toCount(b.comment.createdAt) - toCount(a.comment.createdAt));
+
+      if (all.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-500 italic">No comments yet.</p>';
+        return;
+      }
+
+      all.slice(0, 50).forEach(({ partyId, commentId, comment }) => {
+        const item = document.createElement('div');
+        item.className = 'bg-gray-900/80 border border-gray-700 rounded-xl p-3 flex justify-between items-start gap-3';
+        item.innerHTML = `
+          <div class="min-w-0">
+            <span class="text-[10px] text-purple-400 font-semibold">${escapeHtml(partiesData[partyId] ? partiesData[partyId].name : partyId)} • ${timeAgo(comment.createdAt)}</span>
+            <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
+          </div>
+          <button class="js-delete-comment shrink-0 px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
+        `;
+        item.querySelector('.js-delete-comment').addEventListener('click', () => deleteComment(partyId, commentId));
+        container.appendChild(item);
+      });
+    }
+
+    // One-time move of comments stored under parties/{id}/comments into comments/{id}
+    let migratingComments = false;
+    function migrateLegacyComments() {
+      if (migratingComments) return;
+      const updates = {};
+      Object.entries(partiesData).forEach(([partyId, party]) => {
+        if (!party.comments) return;
+        Object.entries(party.comments).forEach(([commentId, c]) => {
+          if (!c || typeof c.text !== 'string') return;
+          updates[`comments/${partyId}/${commentId}`] = { text: c.text.slice(0, 180), createdAt: Date.parse(c.timestamp) || serverNow() };
+        });
+        updates[`parties/${partyId}/comments`] = null;
+      });
+      if (Object.keys(updates).length === 0) return;
+      migratingComments = true;
+      db.ref().update(updates)
+        .catch(err => console.error('Comment migration failed:', err))
+        .finally(() => { migratingComments = false; });
     }
 
     function openPartyDetailsModal(partyId) {
@@ -1071,35 +1232,15 @@
 
       updateSubscriptionButtonUI();
 
-      db.ref(`parties/${partyId}/comments`).on('value', (snapshot) => {
-        const commentsContainer = document.getElementById('modalCommentContainer');
-        commentsContainer.innerHTML = '';
-
-        const commentsData = snapshot.val();
-        if (!commentsData) {
-          commentsContainer.innerHTML = '<p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>';
-          return;
-        }
-
-        const commentsList = Object.values(commentsData).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        commentsList.forEach(comment => {
-          const commentDiv = document.createElement('div');
-          commentDiv.className = 'bg-gray-800/80 border border-gray-700/80 rounded-xl p-3 mb-2';
-          commentDiv.innerHTML = `
-            <p class="text-xs text-gray-200">${escapeHtml(comment.text)}</p>
-            <span class="text-[10px] text-gray-500 mt-1 block">${timeAgo(comment.timestamp)}</span>
-          `;
-          commentsContainer.appendChild(commentDiv);
-        });
-      });
+      loadPartyComments(partyId);
 
       document.getElementById('partyDetailsModal').classList.remove('hidden');
     }
 
     function closePartyDetailsModal() {
-      if (selectedPartyId) {
-        db.ref(`parties/${selectedPartyId}/comments`).off();
+      if (commentsRef) {
+        commentsRef.off();
+        commentsRef = null;
       }
       document.getElementById('partyDetailsModal').classList.add('hidden');
       selectedPartyId = null;
@@ -1183,7 +1324,7 @@
       Object.entries(partiesData).forEach(([partyId, party]) => {
         const lat = party.lat || DEFAULT_LAT;
         const lng = party.lng || DEFAULT_LNG;
-        const isParty = party.status === 'ACTIVE PARTY';
+        const isParty = effectiveStatus(party) === 'ACTIVE PARTY';
 
         const marker = L.circleMarker([lat, lng], {
           radius: isParty ? 10 : 6,
@@ -1197,7 +1338,7 @@
         marker.bindPopup(`
           <div style="color: #000; font-size: 12px;">
             <strong>${escapeHtml(party.name)}</strong><br>
-            Status: ${escapeHtml(party.status)}
+            Status: ${statusLabel(effectiveStatus(party))}
           </div>
         `);
 
@@ -1330,15 +1471,17 @@
       const text = document.getElementById('feedbackText').value.trim();
       const path = feedbackType === 'BUG' ? 'bugReports' : 'featureRequests';
       
-      db.ref(path).push({ description: text, submittedAt: new Date().toISOString(), createdAt: firebase.database.ServerValue.TIMESTAMP }, (error) => {
+      authReady.then(() => db.ref(path).push({ description: text, submittedAt: new Date().toISOString(), createdAt: TIMESTAMP }, (error) => {
         if (!error) {
           const isBug = feedbackType === 'BUG';
 
           document.getElementById('feedbackText').value = '';
           closeFeedbackModal();
           alert(`Thank you! Your ${isBug ? 'bug report' : 'feature request'} has been submitted.`);
+        } else {
+          alert('Failed to submit: ' + error.message);
         }
-      });
+      }));
     }
 
     function openFeedbackModal() { document.getElementById('feedbackModal').classList.remove('hidden'); }
@@ -1347,12 +1490,16 @@
     // Helpers & Utilities
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;") : ''; }
     function toCount(val) { const n = Number(val); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; }
-    function timeAgo(dateString) {
-      if (!dateString) return 'just now';
-      const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+    function timeAgo(value) {
+      const time = typeof value === 'number' ? value : Date.parse(value);
+      if (!Number.isFinite(time)) return 'no updates yet';
+      const seconds = Math.max(0, Math.floor((serverNow() - time) / 1000));
       if (seconds < 60) return `${seconds}s ago`;
       const minutes = Math.floor(seconds / 60);
-      return `${minutes}m ago`;
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      return `${Math.floor(hours / 24)}d ago`;
     }
 
     function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
@@ -1363,6 +1510,7 @@
 
     function populateDropdown() {
       const select = document.getElementById('reportPartySelect');
+      const selected = select.value;
       select.innerHTML = '';
       Object.entries(partiesData).forEach(([partyId, p]) => {
         const opt = document.createElement('option');
@@ -1370,11 +1518,13 @@
         opt.textContent = p.name;
         select.appendChild(opt);
       });
+      if (selected && partiesData[selected]) select.value = selected;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       setFeedbackType('FEATURE');
       renderUI();
+      setInterval(renderUI, 60 * 1000);
       if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
       }
