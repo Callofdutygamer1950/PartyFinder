@@ -196,10 +196,10 @@
           <span>Install App</span>
         </button>
 
-        <!-- Host Authentication / Panel Button -->
+        <!-- Admin Login / Panel Button -->
         <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
           <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
-          <span id="adminNavText">Host Login</span>
+          <span id="adminNavText">Admin Login</span>
           <span id="adminNavBadge" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
         </button>
       </div>
@@ -363,7 +363,7 @@
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="shield-check" class="w-4 h-4 text-purple-400"></i> Host Authentication
+          <i data-lucide="shield-check" class="w-4 h-4 text-purple-400"></i> Admin Login
         </h2>
         <button onclick="closeLoginModal()" class="text-gray-400 hover:text-white text-xs">✕</button>
       </div>
@@ -384,11 +384,11 @@
     </div>
   </div>
 
-  <!-- Host Admin Panel Modal with Location Management & Pending Proposals -->
+  <!-- Admin Panel Modal with Location Management & Pending Proposals -->
   <div id="hostModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
-        <h2 class="text-lg font-bold text-white">Host Admin Panel</h2>
+        <h2 class="text-lg font-bold text-white">Admin Panel</h2>
         <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium hover:underline">Log Out</button>
       </div>
       <div class="flex gap-1 overflow-x-auto pb-3 mb-3 border-b border-gray-800 shrink-0">
@@ -806,10 +806,10 @@
         adminReportLogRef = db.ref('reportLog').orderByChild('at').startAt(serverNow() - 30 * DAY_MS);
         adminReportLogRef.on('value', onAdminReportLogValue, showAdminLoadError('adminStats', 'stats'));
         migrateLegacyComments();
-        if (navText) navText.textContent = 'Host Panel';
+        if (navText) navText.textContent = 'Admin Panel';
         if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
       } else {
-        if (navText) navText.textContent = 'Host Login';
+        if (navText) navText.textContent = 'Admin Login';
         if (navIcon) navIcon.setAttribute('data-lucide', 'lock');
         renderAdminProposalsList({});
         adminCommentsData = {};
@@ -871,7 +871,7 @@
       showAdminTab(tab || activeAdminTab);
     }
 
-    // Links like ?admin=proposals (used in Discord alerts) open that Host Panel tab
+    // Links like ?admin=proposals (used in Discord alerts) open that Admin Panel tab
     const ADMIN_TABS = ['proposals', 'comments', 'locations', 'stats', 'tools'];
     let pendingAdminTab = ADMIN_TABS.includes(new URLSearchParams(location.search).get('admin'))
       ? new URLSearchParams(location.search).get('admin') : null;
@@ -1769,7 +1769,7 @@
     }
 
     function flagComment(partyId, commentId) {
-      if (!confirm('Flag this comment as inappropriate? Comments flagged by 3 people are hidden until a host reviews them.')) return;
+      if (!confirm('Flag this comment as inappropriate? Comments flagged by 3 people are hidden until an admin reviews them.')) return;
       whenSignedIn()
         .then(user => db.ref(`commentFlags/${partyId}/${commentId}/${user.uid}`).set(true))
         .catch(err => alert('Could not flag comment: ' + err.message));
@@ -1787,7 +1787,7 @@
       db.ref(`commentFlags/${partyId}/${commentId}`).remove().catch(err => alert('Could not clear flags: ' + err.message));
     }
 
-    // Host panel: flagged comments first, then the newest, with delete buttons
+    // Admin panel: flagged comments first, then the newest, with delete buttons
     let adminCommentsData = {};
     let adminFlagsData = {};
     function onAdminCommentsValue(snapshot) {
