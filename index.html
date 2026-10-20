@@ -49,7 +49,7 @@
           </button>
         </div>
 
-        <!-- Dynamic Feedback Button (Starts as Request Feature) -->
+        <!-- Dynamic Feedback Button -->
         <button onclick="openFeedbackModal()" id="headerFeedbackBtn" class="px-3 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-lg flex items-center gap-1.5 transition">
           <i data-lucide="lightbulb" id="headerFeedbackIcon" class="w-3.5 h-3.5"></i>
           <span id="headerFeedbackTitle">Request Feature</span>
@@ -113,7 +113,7 @@
 
       <form id="reportForm" onsubmit="handleStatusSubmit(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Select Party</label>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Select Location</label>
           <select id="reportPartySelect" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-purple-500"></select>
         </div>
 
@@ -144,7 +144,7 @@
   </main>
 
   <footer class="border-t border-gray-900 py-6 text-center text-xs text-gray-500">
-    Campus Party Monitor &copy; 2026. Real-time updates synced via Firebase.
+    Drop the Addy &copy; 2026. Real-time updates synced via Firebase.
   </footer>
 
   <!-- Party Details Modal -->
@@ -177,7 +177,7 @@
     </div>
   </div>
 
-  <!-- Combined Feedback Modal (Bug & Feature) -->
+  <!-- Combined Feedback Modal -->
   <div id="feedbackModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-amber-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
       <div class="flex items-center gap-3 mb-3">
@@ -185,7 +185,6 @@
         <h2 class="text-lg font-bold text-white" id="feedbackModalTitle">Request Feature</h2>
       </div>
 
-      <!-- Type Selector Toggle -->
       <div class="flex bg-gray-800 p-1 rounded-xl mb-4 border border-gray-700">
         <button type="button" onclick="setFeedbackType('FEATURE')" id="feedbackTypeFeature" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white transition">Request Feature</button>
         <button type="button" onclick="setFeedbackType('BUG')" id="feedbackTypeBug" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition">Report Bug</button>
@@ -201,7 +200,7 @@
     </div>
   </div>
 
-  <!-- Donation Modal with Payment Link Button -->
+  <!-- Donation Modal -->
   <div id="donateModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-pink-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
       <div class="flex items-center gap-3 mb-3">
@@ -222,7 +221,6 @@
         </div>
       </div>
 
-      <!-- Action Button to Donate -->
       <a href="https://cash.app/$YourCashtag" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 mb-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
         <i data-lucide="dollar-sign" class="w-4 h-4"></i>
         Donate via Cash App / Venmo
@@ -232,21 +230,20 @@
     </div>
   </div>
 
-  <!-- Propose Party Modal with Interactive Map Selector -->
+  <!-- Propose Party Modal -->
   <div id="proposeModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
       <h2 class="text-lg font-bold text-white mb-2">Propose New Campus Party</h2>
       <form onsubmit="handleProposeParty(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Party Name</label>
-          <input type="text" id="proposeName" required placeholder="e.g. The Ivy" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+          <input type="text" id="proposeName" required placeholder="e.g. Pine Hall Basement" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Location Description</label>
-          <input type="text" id="proposeLocation" placeholder="e.g. In the yard, your address if you're ready for it" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+          <input type="text" id="proposeLocation" placeholder="e.g. 200 Campus Drive" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
         </div>
         
-        <!-- Interactive Map Selector Button -->
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Map Location</label>
           <button type="button" onclick="startMapLocationSelection()" class="w-full py-2.5 px-3 bg-gray-800 hover:bg-gray-700 border border-purple-500/40 text-purple-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
@@ -265,14 +262,14 @@
     </div>
   </div>
 
-  <!-- Host Admin Panel Modal with Fundraiser Control -->
+  <!-- Host Admin Panel Modal with Location Management -->
   <div id="hostModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
         <h2 class="text-lg font-bold text-white">Host Admin Panel</h2>
         <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium">Log Out</button>
       </div>
-      <div class="flex-grow overflow-y-auto space-y-6">
+      <div class="flex-grow overflow-y-auto space-y-6 pr-1">
         <!-- Fundraiser Goal Editor -->
         <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
           <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Manage iOS App Fundraiser</h3>
@@ -285,13 +282,57 @@
           </div>
         </div>
 
-        <!-- Pending Proposals -->
+        <!-- Location Management Section -->
         <div>
-          <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">Pending Party Proposals</h3>
-          <div id="pendingPartiesList" class="space-y-2"></div>
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider">Manage & Edit Campus Locations</h3>
+            <button onclick="openAdminAddLocationModal()" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Location
+            </button>
+          </div>
+          <div id="adminLocationsList" class="space-y-2"></div>
         </div>
       </div>
       <button onclick="closeHostModal()" class="px-4 py-2 text-xs bg-gray-800 text-gray-300 rounded-lg mt-4 align-self-end">Close</button>
+    </div>
+  </div>
+
+  <!-- Admin Edit Location Modal -->
+  <div id="adminEditLocationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <h2 id="adminLocationModalHeader" class="text-lg font-bold text-white mb-3">Edit Location</h2>
+      <form onsubmit="handleAdminSaveLocation(event)" class="space-y-3">
+        <input type="hidden" id="editPartyId">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Location / Party Name</label>
+          <input type="text" id="editPartyName" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Address / Description</label>
+          <input type="text" id="editPartyLocation" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Status Override</label>
+          <select id="editPartyStatus" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
+            <option value="ACTIVE PARTY">🎉 ACTIVE PARTY</option>
+            <option value="QUIET">🤫 QUIET</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-1">Latitude</label>
+            <input type="number" step="any" id="editPartyLat" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-1">Longitude</label>
+            <input type="number" step="any" id="editPartyLng" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-white">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAdminEditLocationModal()" class="px-3 py-1.5 text-xs text-gray-400">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 text-xs bg-purple-600 text-white font-semibold rounded-lg">Save Changes</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -318,22 +359,49 @@
     let partiesData = {};
     let activeFilter = 'ALL';
     let selectedPartyId = null;
-    let feedbackType = 'FEATURE'; // Default to Request Feature
+    let feedbackType = 'FEATURE';
     let map = null;
     let tempPickerMarker = null;
     let isSelectingLocation = false;
     let mapMarkers = [];
 
-    // Slippery Rock PA Center Coordinates
+    // Slippery Rock Coordinates
     const DEFAULT_LAT = 41.0638;
     const DEFAULT_LNG = -80.0528;
-    const RADIUS_MILES = 3.0; // Updated to 3 Miles
-    const RADIUS_METERS = RADIUS_MILES * 1609.34; // ~4828 meters
+    const RADIUS_MILES = 3.0;
+    const RADIUS_METERS = RADIUS_MILES * 1609.34;
+
+    // Hardcoded Staple Locations
+    const PERMANENT_LOCATIONS = [
+      { id: "perm_grove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540 },
+      { id: "perm_ivy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510 },
+      { id: "perm_heights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490 }
+    ];
+
+    // Seed permanent locations into Firebase if not present
+    function seedPermanentLocations() {
+      db.ref('parties').once('value', (snapshot) => {
+        const existing = snapshot.val() || {};
+        PERMANENT_LOCATIONS.forEach(loc => {
+          if (!existing[loc.id]) {
+            db.ref(`parties/${loc.id}`).set({
+              ...loc,
+              crowdReportCount: 0,
+              crowdTotalSum: 0,
+              lastUpdated: new Date().toISOString()
+            });
+          }
+        });
+      });
+    }
+
+    seedPermanentLocations();
 
     // Realtime Database Sync
     db.ref('parties').on('value', (snapshot) => {
       partiesData = snapshot.val() || {};
       renderUI();
+      renderAdminLocationsList();
     });
 
     db.ref('fundraiser/raised').on('value', (snapshot) => {
@@ -354,7 +422,7 @@
 
       const partyList = Object.values(partiesData);
       if (partyList.length === 0) {
-        grid.innerHTML = `<div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40"><p class="text-sm text-gray-300 font-semibold">No Active Parties Listed</p></div>`;
+        grid.innerHTML = `<div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40"><p class="text-sm text-gray-300 font-semibold">No Locations Listed</p></div>`;
         return;
       }
 
@@ -373,7 +441,10 @@
         card.innerHTML = `
           <div>
             <div class="flex justify-between items-start mb-2">
-              <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
+                ${party.isPermanent ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-purple-900/60 text-purple-300 border border-purple-500/30">Staple</span>` : ''}
+              </div>
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${party.status}</span>
             </div>
             ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
@@ -390,11 +461,100 @@
       });
     }
 
-    // Leaflet OpenStreetMap bounded to 3 Miles of Slippery Rock with Outside Greying Mask
+    // Host Admin Location Management
+    function renderAdminLocationsList() {
+      const container = document.getElementById('adminLocationsList');
+      container.innerHTML = '';
+
+      Object.values(partiesData).forEach(party => {
+        const item = document.createElement('div');
+        item.className = 'bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 flex justify-between items-center gap-3';
+        item.innerHTML = `
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-xs">${escapeHtml(party.name)}</span>
+              ${party.isPermanent ? `<span class="text-[9px] text-purple-400 font-semibold">(Permanent)</span>` : ''}
+              <span class="text-[10px] px-2 py-0.5 rounded ${party.status === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${party.status}</span>
+            </div>
+            <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openAdminEditLocationModal('${party.id}')" class="px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit</button>
+            ${!party.isPermanent ? `<button onclick="handleAdminDeleteLocation('${party.id}')" class="px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>` : ''}
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openAdminAddLocationModal() {
+      document.getElementById('editPartyId').value = '';
+      document.getElementById('editPartyName').value = '';
+      document.getElementById('editPartyLocation').value = '';
+      document.getElementById('editPartyStatus').value = 'QUIET';
+      document.getElementById('editPartyLat').value = DEFAULT_LAT;
+      document.getElementById('editPartyLng').value = DEFAULT_LNG;
+      document.getElementById('adminLocationModalHeader').textContent = 'Add New Location';
+      document.getElementById('adminEditLocationModal').classList.remove('hidden');
+    }
+
+    function openAdminEditLocationModal(partyId) {
+      const party = partiesData[partyId];
+      if (!party) return;
+
+      document.getElementById('editPartyId').value = party.id;
+      document.getElementById('editPartyName').value = party.name || '';
+      document.getElementById('editPartyLocation').value = party.location || '';
+      document.getElementById('editPartyStatus').value = party.status || 'QUIET';
+      document.getElementById('editPartyLat').value = party.lat || DEFAULT_LAT;
+      document.getElementById('editPartyLng').value = party.lng || DEFAULT_LNG;
+      document.getElementById('adminLocationModalHeader').textContent = 'Edit Location Info';
+      document.getElementById('adminEditLocationModal').classList.remove('hidden');
+    }
+
+    function closeAdminEditLocationModal() {
+      document.getElementById('adminEditLocationModal').classList.add('hidden');
+    }
+
+    function handleAdminSaveLocation(e) {
+      e.preventDefault();
+      const id = document.getElementById('editPartyId').value || `party_${Date.now()}`;
+      const existing = partiesData[id] || {};
+
+      const updated = {
+        id: id,
+        name: document.getElementById('editPartyName').value.trim(),
+        location: document.getElementById('editPartyLocation').value.trim(),
+        status: document.getElementById('editPartyStatus').value,
+        lat: parseFloat(document.getElementById('editPartyLat').value) || DEFAULT_LAT,
+        lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
+        isPermanent: existing.isPermanent || false,
+        lastUpdated: new Date().toISOString()
+      };
+
+      db.ref(`parties/${id}`).update(updated, (err) => {
+        if (!err) {
+          closeAdminEditLocationModal();
+          alert('Location saved successfully!');
+        }
+      });
+    }
+
+    function handleAdminDeleteLocation(partyId) {
+      const party = partiesData[partyId];
+      if (party && party.isPermanent) {
+        alert('Permanent staple locations cannot be deleted.');
+        return;
+      }
+      if (confirm(`Are you sure you want to delete "${party.name}"?`)) {
+        db.ref(`parties/${partyId}`).remove();
+      }
+    }
+
+    // Leaflet OpenStreetMap bounded to 3 Miles of Slippery Rock
     function initMap() {
       if (map) return;
 
-      // Expanded bounding box coordinates for 3-mile radius
       const latDelta = 0.048; 
       const lngDelta = 0.063; 
       const southWest = L.latLng(DEFAULT_LAT - latDelta, DEFAULT_LNG - lngDelta);
@@ -415,12 +575,10 @@
 
       osmLayer.getContainer().style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
 
-      // Outer bounding box polygon for masking outer area
       const outerWorld = [
         [90, -180], [90, 180], [-90, 180], [-90, -180]
       ];
 
-      // Circular cutout hole for 3-mile radius zone
       const circlePoints = [];
       for (let i = 0; i <= 360; i += 5) {
         const rad = (i * Math.PI) / 180;
@@ -567,7 +725,7 @@
       });
     }
 
-    // Dynamic Feedback Modal & Header Button Logic (Defaults to Feature Request)
+    // Dynamic Feedback Modal & Header Button Logic
     function setFeedbackType(type) {
       feedbackType = type;
 
