@@ -147,7 +147,7 @@
     Drop the Addy &copy; 2026. Real-time updates synced via Firebase.
   </footer>
 
-  <!-- Party Details Modal -->
+  <!-- Party Details Modal with Multi-Comment Feed -->
   <div id="partyDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
       <div class="flex justify-between items-start border-b border-gray-800 pb-4 mb-4">
@@ -161,13 +161,13 @@
       <div class="flex-grow overflow-y-auto space-y-4 pr-1">
         <div>
           <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Live Comments</h3>
-          <div id="modalCommentContainer" class="bg-gray-800/50 border border-gray-700/60 rounded-xl p-3 text-xs text-gray-300 min-h-[60px] flex items-center justify-center">
-            <p class="text-gray-500 italic">No active comments posted yet.</p>
+          <div id="modalCommentContainer" class="min-h-[80px] space-y-2">
+            <p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>
           </div>
         </div>
 
-        <form onsubmit="handleModalCommentSubmit(event)" class="space-y-2 pt-2">
-          <label class="block text-xs font-semibold text-gray-400">Post Comment (Auto-deletes in 12h)</label>
+        <form onsubmit="handleModalCommentSubmit(event)" class="space-y-2 pt-2 border-t border-gray-800">
+          <label class="block text-xs font-semibold text-gray-400">Post Comment</label>
           <div class="flex gap-2">
             <input type="text" id="modalCommentInput" maxlength="180" placeholder="Type a comment..." required class="flex-grow bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
             <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition">Post</button>
@@ -342,14 +342,15 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
   <script>
+    // Injected via GitHub Actions environment secrets build step
     const firebaseConfig = {
-      apiKey: "YOUR_FIREBASE_API_KEY",
-      authDomain: "campus-party-finder.firebaseapp.com",
-      databaseURL: "https://campus-party-finder-default-rtdb.firebaseio.com",
-      projectId: "campus-party-finder",
-      storageBucket: "campus-party-finder.appspot.com",
-      messagingSenderId: "123456789012",
-      appId: "1:123456789012:web:abcdef123456"
+      apiKey: "__FIREBASE_API_KEY__",
+      authDomain: "__FIREBASE_AUTH_DOMAIN__",
+      databaseURL: "__FIREBASE_DATABASE_URL__",
+      projectId: "__FIREBASE_PROJECT_ID__",
+      storageBucket: "__FIREBASE_STORAGE_BUCKET__",
+      messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
+      appId: "__FIREBASE_APP_ID__"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -365,20 +366,20 @@
     let isSelectingLocation = false;
     let mapMarkers = [];
 
-    // Slippery Rock Coordinates
+    // Slippery Rock Coordinates & 3-Mile Geofence
     const DEFAULT_LAT = 41.0638;
     const DEFAULT_LNG = -80.0528;
     const RADIUS_MILES = 3.0;
     const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
-    // Hardcoded Staple Locations
+    // Permanent Staple Locations (camelCase Keys)
     const PERMANENT_LOCATIONS = {
-      "perm_grove": { id: "perm_grove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540, crowdReportCount: 0, crowdTotalSum: 0 },
-      "perm_ivy": { id: "perm_ivy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510, crowdReportCount: 0, crowdTotalSum: 0 },
-      "perm_heights": { id: "perm_heights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490, crowdReportCount: 0, crowdTotalSum: 0 }
+      "permGrove": { id: "permGrove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540, crowdReportCount: 0, crowdTotalSum: 0 },
+      "permIvy": { id: "permIvy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510, crowdReportCount: 0, crowdTotalSum: 0 },
+      "permHeights": { id: "permHeights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490, crowdReportCount: 0, crowdTotalSum: 0 }
     };
 
-    // Atomic Seed & Local Fallback Merge
+    // Atomic Database Seed
     function seedPermanentLocations() {
       db.ref('parties').once('value', (snapshot) => {
         const val = snapshot.val() || {};
@@ -403,7 +404,7 @@
 
     seedPermanentLocations();
 
-    // Sync database & merge permanent defaults locally if missing from initial payload
+    // Sync database & merge staple locations locally
     db.ref('parties').on('value', (snapshot) => {
       const rawVal = snapshot.val() || {};
       partiesData = { ...PERMANENT_LOCATIONS, ...rawVal };
@@ -590,7 +591,80 @@
       });
     }
 
-    // Leaflet OpenStreetMap bounded to 3 Miles
+    // Multi-Comment Feed Logic (Unique messageId via .push())
+    function handleModalCommentSubmit(e) {
+      e.preventDefault();
+      if (!selectedPartyId) return;
+
+      const input = document.getElementById('modalCommentInput');
+      const commentText = input.value.trim();
+      if (!commentText) return;
+
+      const newCommentRef = db.ref(`parties/${selectedPartyId}/comments`).push();
+      const messageId = newCommentRef.key;
+
+      const commentData = {
+        messageId: messageId,
+        text: commentText,
+        timestamp: new Date().toISOString()
+      };
+
+      newCommentRef.set(commentData, (error) => {
+        if (error) {
+          alert('Failed to post comment: ' + error.message);
+        } else {
+          input.value = '';
+          db.ref(`parties/${selectedPartyId}`).update({
+            latestComment: commentText,
+            commentTimestamp: commentData.timestamp
+          });
+        }
+      });
+    }
+
+    function openPartyDetailsModal(partyId) {
+      selectedPartyId = partyId;
+      const party = partiesData[partyId];
+      if (!party) return;
+
+      document.getElementById('modalPartyTitle').textContent = party.name;
+      document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
+
+      db.ref(`parties/${partyId}/comments`).on('value', (snapshot) => {
+        const commentsContainer = document.getElementById('modalCommentContainer');
+        commentsContainer.innerHTML = '';
+
+        const commentsData = snapshot.val();
+        if (!commentsData) {
+          commentsContainer.innerHTML = '<p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>';
+          return;
+        }
+
+        const commentsList = Object.values(commentsData).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        commentsList.forEach(comment => {
+          const commentDiv = document.createElement('div');
+          commentDiv.className = 'bg-gray-800/80 border border-gray-700/80 rounded-xl p-3 mb-2';
+          commentDiv.innerHTML = `
+            <p class="text-xs text-gray-200">${escapeHtml(comment.text)}</p>
+            <span class="text-[10px] text-gray-500 mt-1 block">${timeAgo(comment.timestamp)}</span>
+          `;
+          commentsContainer.appendChild(commentDiv);
+        });
+      });
+
+      document.getElementById('partyDetailsModal').classList.remove('hidden');
+    }
+
+    function closePartyDetailsModal() {
+      if (selectedPartyId) {
+        db.ref(`parties/${selectedPartyId}/comments`).off();
+      }
+      document.getElementById('partyDetailsModal').classList.add('hidden');
+      selectedPartyId = null;
+    }
+
+    // Leaflet OpenStreetMap Bounded to 3 Miles
     function initMap() {
       if (map) return;
 
@@ -829,34 +903,6 @@
       if (seconds < 60) return `${seconds}s ago`;
       const minutes = Math.floor(seconds / 60);
       return `${minutes}m ago`;
-    }
-
-    function openPartyDetailsModal(partyId) {
-      selectedPartyId = partyId;
-      const party = partiesData[partyId];
-      if (!party) return;
-
-      document.getElementById('modalPartyTitle').textContent = party.name;
-      document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
-
-      const commentContainer = document.getElementById('modalCommentContainer');
-      if (party.latestComment) {
-        commentContainer.innerHTML = `
-          <div>
-            <p class="text-xs text-gray-200 italic">"${escapeHtml(party.latestComment)}"</p>
-            <p class="text-[10px] text-gray-500 mt-1">Posted ${timeAgo(party.commentTimestamp)}</p>
-          </div>
-        `;
-      } else {
-        commentContainer.innerHTML = `<p class="text-gray-500 italic text-center">No active comments posted yet.</p>`;
-      }
-
-      document.getElementById('partyDetailsModal').classList.remove('hidden');
-    }
-
-    function closePartyDetailsModal() {
-      document.getElementById('partyDetailsModal').classList.add('hidden');
-      selectedPartyId = null;
     }
 
     function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
