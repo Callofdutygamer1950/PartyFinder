@@ -75,14 +75,21 @@
           <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
           <input type="text" id="searchInput" oninput="filterParties()" placeholder="Search party or location..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition">
         </div>
-        <div class="flex gap-2 items-center">
-          <label for="sortSelect" class="text-xs text-gray-500 shrink-0">Sort by</label>
-          <select id="sortSelect" onchange="setSort(this.value)" class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
-            <option value="HOT">🔥 Hottest</option>
-            <option value="CLOSE">📍 Closest</option>
-            <option value="NEW">🕒 Newest</option>
-          </select>
-          <button onclick="requestUserLocation()" id="nearMeBtn" class="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-400 border border-gray-800 hover:bg-gray-800 transition">📍 Near me</button>
+        <div class="relative inline-block" id="sortMenuWrap">
+          <button onclick="toggleSortMenu()" id="sortMenuBtn" aria-haspopup="menu" aria-expanded="false" class="px-3 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:bg-gray-800 transition flex items-center gap-1.5">
+            Sort by <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform"></i>
+          </button>
+          <div id="sortMenu" role="menu" class="hidden absolute left-0 mt-2 w-44 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-30 p-1">
+            <button role="menuitemradio" data-sort="HOT" onclick="chooseSort('HOT')" class="sort-option w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs text-gray-400 hover:bg-gray-800 hover:text-white transition">
+              <span>🔥 Hottest</span><span class="sort-check">✓</span>
+            </button>
+            <button role="menuitemradio" data-sort="CLOSE" onclick="chooseSort('CLOSE')" class="sort-option w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs text-gray-400 hover:bg-gray-800 hover:text-white transition">
+              <span id="nearMeLabel">📍 Near me</span><span class="sort-check invisible">✓</span>
+            </button>
+            <button role="menuitemradio" data-sort="NEW" onclick="chooseSort('NEW')" class="sort-option w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs text-gray-400 hover:bg-gray-800 hover:text-white transition">
+              <span>🕒 Newest</span><span class="sort-check invisible">✓</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
@@ -108,8 +115,10 @@
       </div>
     </div>
 
+    <!-- Report form + safety card: side by side on laptops, stacked on phones -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
     <!-- Anonymous Status Report Form -->
-    <section class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 md:p-8 max-w-2xl mx-auto shadow-xl">
+    <section class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 md:p-8 shadow-xl">
       <div class="flex items-center gap-3 mb-4">
         <i data-lucide="send" class="w-5 h-5 text-purple-400"></i>
         <h2 class="text-lg font-bold text-white">Submit Anonymous Status Update</h2>
@@ -147,7 +156,7 @@
     </section>
 
     <!-- Safety Card -->
-    <section class="bg-gray-900/80 border border-emerald-500/30 rounded-2xl p-6 max-w-2xl mx-auto shadow-xl mt-8">
+    <section class="bg-gray-900/80 border border-emerald-500/30 rounded-2xl p-6 md:p-8 shadow-xl">
       <div class="flex items-center gap-3 mb-3">
         <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
         <h2 class="text-lg font-bold text-white">Get Home Safe</h2>
@@ -160,6 +169,7 @@
       </div>
       <p class="text-[11px] text-gray-500 mt-3">Watch your drink, go with friends, and leave with the people you came with. If someone can't stay awake or is breathing slowly, call 911.</p>
     </section>
+    </div>
   </main>
 
   <!-- Integrated Footer Section -->
@@ -627,15 +637,15 @@
         alert('Location is not available in this browser.');
         return;
       }
-      const btn = document.getElementById('nearMeBtn');
-      btn.textContent = '📍 Locating...';
+      const label = document.getElementById('nearMeLabel');
+      label.textContent = '📍 Locating...';
       navigator.geolocation.getCurrentPosition((pos) => {
         userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        btn.textContent = '📍 Near me ✓';
+        label.textContent = '📍 Near me';
         if (thenSortClosest) setSort('CLOSE');
         else renderUI();
       }, () => {
-        btn.textContent = '📍 Near me';
+        label.textContent = '📍 Near me';
         alert('Could not get your location. Check that location access is allowed for this site.');
         if (activeSort === 'CLOSE') setSort('HOT');
       }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 5 * 60 * 1000 });
@@ -643,13 +653,44 @@
 
     function setSort(sort) {
       activeSort = sort;
-      document.getElementById('sortSelect').value = sort;
+      updateSortMenuUI();
       if (sort === 'CLOSE' && !userCoords) {
         requestUserLocation(true);
         return;
       }
       renderUI();
     }
+
+    // "Sort by" pop-out menu
+    function toggleSortMenu(open) {
+      const menu = document.getElementById('sortMenu');
+      const show = open === undefined ? menu.classList.contains('hidden') : open;
+      menu.classList.toggle('hidden', !show);
+      document.getElementById('sortMenuBtn').setAttribute('aria-expanded', String(show));
+      const chevron = document.querySelector('#sortMenuBtn svg');
+      if (chevron) chevron.classList.toggle('rotate-180', show);
+    }
+
+    function chooseSort(sort) {
+      toggleSortMenu(false);
+      setSort(sort);
+    }
+
+    function updateSortMenuUI() {
+      document.querySelectorAll('.sort-option').forEach(option => {
+        const active = option.dataset.sort === activeSort;
+        option.classList.toggle('text-white', active);
+        option.classList.toggle('bg-gray-800', active);
+        option.querySelector('.sort-check').classList.toggle('invisible', !active);
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#sortMenuWrap')) toggleSortMenu(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') toggleSortMenu(false);
+    });
 
     // Disconnect from the database while the tab is in the background, so idle tabs don't use up
     // the free plan's 100 simultaneous connections. Reconnects as soon as the visitor comes back.
