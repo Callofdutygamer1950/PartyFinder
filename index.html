@@ -432,30 +432,6 @@
       appId: "__FIREBASE_APP_ID__"
     };
 
-    // Discord Webhook Secret Placeholder
-    const DISCORD_WEBHOOK_URL = "__DISCORD_WEBHOOK_URL__";
-
-    function sendDiscordNotification(title, description, colorHex = 0xa855f7, fields = []) {
-      if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("__DISCORD_WEBHOOK_URL__")) return;
-
-      const payload = {
-        embeds: [{
-          title: title,
-          description: description,
-          color: colorHex,
-          fields: fields,
-          timestamp: new Date().toISOString(),
-          footer: { text: "Drop the Addy Alerts" }
-        }]
-      };
-
-      fetch(DISCORD_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }).catch(err => console.error("Discord Webhook Error:", err));
-    }
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
@@ -755,7 +731,8 @@
         lat: lat,
         lng: lng,
         status: 'QUIET',
-        submittedAt: new Date().toISOString()
+        submittedAt: new Date().toISOString(),
+        createdAt: firebase.database.ServerValue.TIMESTAMP
       };
 
       newProposalRef.set(proposalData, (error) => {
@@ -763,16 +740,6 @@
           alert('Failed to submit proposal: ' + error.message);
         } else {
           alert('Party proposal submitted for admin review!');
-          
-          sendDiscordNotification(
-            "🎉 New Party Proposal Submitted!",
-            `**Name:** ${name}\n**Location:** ${location || "Campus Area"}`,
-            0xec4899,
-            [
-              { name: "Coordinates", value: `${lat}, ${lng}`, inline: true },
-              { name: "Action Needed", value: "Review in Host Admin Panel", inline: true }
-            ]
-          );
 
           document.getElementById('proposeName').value = '';
           document.getElementById('proposeLocation').value = '';
@@ -1340,15 +1307,9 @@
       const text = document.getElementById('feedbackText').value.trim();
       const path = feedbackType === 'BUG' ? 'bugReports' : 'featureRequests';
       
-      db.ref(path).push({ description: text, submittedAt: new Date().toISOString() }, (error) => {
+      db.ref(path).push({ description: text, submittedAt: new Date().toISOString(), createdAt: firebase.database.ServerValue.TIMESTAMP }, (error) => {
         if (!error) {
           const isBug = feedbackType === 'BUG';
-          sendDiscordNotification(
-            isBug ? "🐛 New Bug Report Submitted" : "💡 New Feature Request Submitted",
-            text,
-            isBug ? 0xef4444 : 0xf59e0b,
-            [{ name: "Type", value: isBug ? "Bug Report" : "Feature Request", inline: true }]
-          );
 
           document.getElementById('feedbackText').value = '';
           closeFeedbackModal();
