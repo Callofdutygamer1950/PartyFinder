@@ -231,7 +231,7 @@
           Donate via Cash App
         </a>
 
-        <a href="buymeacoffee.com/callofdutygamer1950" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-900/20">
+        <a href="https://buymeacoffee.com/callofdutygamer1950" target="_blank" rel="noopener noreferrer" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-amber-900/20">
           <i data-lucide="coffee" class="w-4 h-4"></i>
           Buy Me a Coffee
         </a>
@@ -299,7 +299,7 @@
     </div>
   </div>
 
-  <!-- Host Admin Panel Modal with Location Management -->
+  <!-- Host Admin Panel Modal with Location Management & Pending Proposals -->
   <div id="hostModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
@@ -307,6 +307,16 @@
         <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium hover:underline">Log Out</button>
       </div>
       <div class="flex-grow overflow-y-auto space-y-6 pr-1">
+        <!-- Pending Party Proposals Review Queue -->
+        <div class="bg-gray-800/60 border border-purple-500/30 rounded-xl p-4">
+          <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <i data-lucide="clock" class="w-4 h-4"></i> Pending Party Proposals
+          </h3>
+          <div id="adminProposalsList" class="space-y-2">
+            <p class="text-xs text-gray-500 italic">No pending party proposals.</p>
+          </div>
+        </div>
+
         <!-- Fundraiser Goal Editor -->
         <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
           <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Manage iOS App Fundraiser</h3>
@@ -532,6 +542,12 @@
       renderAdminLocationsList();
     });
 
+    // Listen for incoming party proposals
+    db.ref('proposals').on('value', (snapshot) => {
+      const proposalsData = snapshot.val() || {};
+      renderAdminProposalsList(proposalsData);
+    });
+
     db.ref('fundraiser/raised').on('value', (snapshot) => {
       const raised = snapshot.val() || 0;
       updateDonateProgressBar(raised);
@@ -615,6 +631,113 @@
         `;
         container.appendChild(item);
       });
+    }
+
+    function renderAdminProposalsList(proposalsData) {
+      const container = document.getElementById('adminProposalsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const proposalList = Object.values(proposalsData);
+      if (proposalList.length === 0) {
+        container.innerHTML = '<p class="text-xs text-gray-500 italic">No pending party proposals.</p>';
+        return;
+      }
+
+      proposalList.forEach(prop => {
+        const item = document.createElement('div');
+        item.className = 'bg-gray-900/80 border border-amber-500/30 rounded-xl p-3 flex justify-between items-center gap-3';
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-white text-xs block">${escapeHtml(prop.name)}</span>
+            <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.submittedAt)}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="approveProposal('${prop.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg font-semibold transition">Approve</button>
+            <button onclick="rejectProposal('${prop.id}')" class="px-2.5 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded-lg font-semibold transition">Reject</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
+    }
+
+    // Party Proposal Actions
+    function handleProposeParty(e) {
+      e.preventDefault();
+      const name = document.getElementById('proposeName').value.trim();
+      const location = document.getElementById('proposeLocation').value.trim();
+      const lat = parseFloat(document.getElementById('proposeLat').value) || DEFAULT_LAT;
+      const lng = parseFloat(document.getElementById('proposeLng').value) || DEFAULT_LNG;
+
+      if (!name) return;
+
+      if (containsProfanity(name) || containsProfanity(location)) {
+        alert('Proposals containing prohibited language cannot be submitted.');
+        return;
+      }
+
+      const newProposalRef = db.ref('proposals').push();
+      const proposalData = {
+        id: newProposalRef.key,
+        name: name,
+        location: location || 'Campus Area',
+        lat: lat,
+        lng: lng,
+        status: 'QUIET',
+        submittedAt: new Date().toISOString()
+      };
+
+      newProposalRef.set(proposalData, (error) => {
+        if (error) {
+          alert('Failed to submit proposal: ' + error.message);
+        } else {
+          alert('Party proposal submitted for admin review!');
+          document.getElementById('proposeName').value = '';
+          document.getElementById('proposeLocation').value = '';
+          document.getElementById('proposeLat').value = '';
+          document.getElementById('proposeLng').value = '';
+          document.getElementById('mapPinButtonText').textContent = 'Click to Pick Location on Map';
+          closeProposeModal();
+        }
+      });
+    }
+
+    function approveProposal(propId) {
+      db.ref(`proposals/${propId}`).once('value', (snapshot) => {
+        const prop = snapshot.val();
+        if (!prop) return;
+
+        const newParty = {
+          id: prop.id,
+          name: prop.name,
+          location: prop.location,
+          lat: prop.lat,
+          lng: prop.lng,
+          status: 'ACTIVE PARTY',
+          isPermanent: false,
+          crowdReportCount: 0,
+          crowdTotalSum: 0,
+          lastUpdated: new Date().toISOString()
+        };
+
+        const updates = {};
+        updates[`parties/${prop.id}`] = newParty;
+        updates[`proposals/${prop.id}`] = null;
+
+        db.ref().update(updates, (err) => {
+          if (!err) alert(`Approved "${prop.name}"! It is now live on the app.`);
+        });
+      });
+    }
+
+    function rejectProposal(propId) {
+      if (confirm('Are you sure you want to reject this proposal?')) {
+        db.ref(`proposals/${propId}`).remove();
+      }
     }
 
     function openAdminAddLocationModal() {
