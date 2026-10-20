@@ -255,7 +255,7 @@
         </div>
 
         <form onsubmit="handleModalCommentSubmit(event)" class="space-y-2 pt-2 border-t border-gray-800">
-          <label class="block text-xs font-semibold text-gray-400">Post Comment</label>
+          <label class="block text-xs font-semibold text-gray-400">Post Comment <span class="font-normal text-gray-500">· comments disappear after 12 hours</span></label>
           <div class="flex gap-2">
             <input type="text" id="modalCommentInput" maxlength="180" placeholder="Type a comment..." required class="flex-grow bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
             <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition">Post</button>
@@ -450,10 +450,9 @@
               <i data-lucide="eraser" class="w-4 h-4"></i> Cleanup Tools
             </h3>
             <div class="flex flex-wrap gap-2">
-              <button onclick="deleteOldComments()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Delete comments older than 7 days</button>
               <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
             </div>
-            <p class="text-[10px] text-gray-500 mt-2">Use "Reset votes" on a location in the Locations tab to zero its 👍/👎.</p>
+            <p class="text-[10px] text-gray-500 mt-2">Comments delete themselves after 12 hours. Use "Reset votes" on a location in the Locations tab to zero its 👍/👎.</p>
           </div>
 
           <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
@@ -905,6 +904,7 @@
       if (currentAdminUser) {
         Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
           Object.keys(comments || {}).forEach(commentId => {
+            if (isExpiredComment(comments[commentId])) return;
             const info = flagInfo((adminFlagsData[partyId] || {})[commentId]);
             if (info.auto || info.people) flagged++;
           });
@@ -1702,6 +1702,9 @@
     }
 
     const FLAGS_TO_HIDE = 3;
+    // Comments expire after 12 hours: hidden here right away, deleted from the database by the Apps Script
+    const COMMENT_LIFETIME_MS = 12 * 60 * 60 * 1000;
+    const isExpiredComment = (comment) => serverNow() - toCount(comment && comment.createdAt) > COMMENT_LIFETIME_MS;
     // "automod" is set by the server-side word filter; any other key is a visitor's flag
     function flagInfo(flagsObj) {
       const keys = Object.keys(flagsObj || {});
@@ -1738,7 +1741,7 @@
 
       const commentsList = Object.entries(modalComments)
         .map(([commentId, comment]) => ({ commentId, comment, flags: Object.keys(modalFlags[commentId] || {}), info: flagInfo(modalFlags[commentId]) }))
-        .filter(({ info }) => currentAdminUser || !info.hidden)
+        .filter(({ comment, info }) => !isExpiredComment(comment) && (currentAdminUser || !info.hidden))
         .sort((a, b) => toCount(b.comment.createdAt) - toCount(a.comment.createdAt));
 
       if (commentsList.length === 0) {
@@ -1807,6 +1810,7 @@
       const all = [];
       Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
         Object.entries(comments || {}).forEach(([commentId, comment]) => {
+          if (isExpiredComment(comment)) return;
           const info = flagInfo((adminFlagsData[partyId] || {})[commentId]);
           all.push({ partyId, commentId, comment, info, priority: (info.auto ? 100 : 0) + info.people });
         });
@@ -1919,22 +1923,6 @@
       }).then(() => alert('Votes reset.'), err => alert('Reset failed: ' + err.message));
     }
 
-    function deleteOldComments() {
-      const cutoff = serverNow() - 7 * DAY_MS;
-      const updates = {};
-      Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
-        Object.entries(comments || {}).forEach(([commentId, comment]) => {
-          if (toCount(comment.createdAt) < cutoff) {
-            updates[`comments/${partyId}/${commentId}`] = null;
-            updates[`commentFlags/${partyId}/${commentId}`] = null;
-          }
-        });
-      });
-      const count = Object.keys(updates).length / 2;
-      if (count === 0) { alert('No comments older than 7 days.'); return; }
-      if (!confirm(`Delete ${count} comment${count === 1 ? '' : 's'} older than 7 days?`)) return;
-      db.ref().update(updates).then(() => alert('Old comments deleted.'), err => alert('Delete failed: ' + err.message));
-    }
 
     function clearOldReportHistory() {
       db.ref('reportLog').orderByChild('at').endAt(serverNow() - 30 * DAY_MS).once('value').then((snap) => {
