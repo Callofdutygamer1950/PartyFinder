@@ -219,7 +219,7 @@
         </button>
 
         <!-- Admin Login / Panel Button -->
-        <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
+        <button onclick="handleAdminButtonClick()" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
           <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
           <span id="adminNavText">Admin Login</span>
           <span id="adminNavBadge" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
@@ -246,7 +246,7 @@
             <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
             <span>Share</span>
           </button>
-          <!-- Restored Subscribe Toggle Button -->
+          <!-- Subscribe Toggle Button -->
           <button id="modalSubscribeBtn" onclick="togglePartySubscription()" class="px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition">
             <i data-lucide="bell" class="w-3.5 h-3.5"></i>
             <span id="modalSubscribeText">Subscribe</span>
@@ -258,7 +258,7 @@
       <!-- Live Voting Bar Inside Modal -->
       <div class="flex items-center justify-between bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 mb-4">
         <span class="text-xs font-medium text-gray-300">Rate this Location:</span>
-        <div class="flex items-center gap-3" id="modalVotingContainer">
+        <div class="flex items-center gap-3">
           <button id="modalUpvoteBtn" onclick="castPartyVote(selectedPartyId, 'up')" class="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
             <i data-lucide="thumbs-up" class="w-3.5 h-3.5"></i> <span id="modalUpvoteCount">0</span>
           </button>
@@ -473,7 +473,7 @@
     </div>
   </div>
 
-  <!-- Admin Panel Modal with Location Management & Pending Proposals -->
+  <!-- Admin Panel Modal (tabbed) -->
   <div id="hostModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
       <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
@@ -893,7 +893,6 @@
         db.ref('commentFlags').on('value', onAdminFlagsValue, () => {});
         adminReportLogRef = db.ref('reportLog').orderByChild('at').startAt(serverNow() - 30 * DAY_MS);
         adminReportLogRef.on('value', onAdminReportLogValue, showAdminLoadError('adminStats', 'stats'));
-        migrateLegacyComments();
         if (navText) navText.textContent = 'Admin Panel';
         if (navIcon) navIcon.setAttribute('data-lucide', 'shield');
       } else {
@@ -915,9 +914,7 @@
         }
       }
 
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     });
 
     function handleAdminButtonClick() {
@@ -1004,7 +1001,7 @@
       setBadge('adminNavBadge', proposals + flagged);
     }
 
-    // Direct Firebase database listener for parties with Browser Notifications
+    // Live party data; also alerts this tab when a subscribed party changes status
     db.ref('parties').on('value', (snapshot) => {
       const oldData = partiesData;
       partiesData = snapshot.val() || {};
@@ -1026,7 +1023,6 @@
       renderUI();
       renderAdminLocationsList();
       updateModalVoteUI();
-      if (currentAdminUser) migrateLegacyComments();
 
       if (pendingSharedPartyId) {
         if (partiesData[pendingSharedPartyId]) openPartyDetailsModal(pendingSharedPartyId);
@@ -1049,22 +1045,19 @@
       renderPartiesGrid();
       populateDropdown();
       if (map) updateMapLayers();
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     }
 
     function renderPartiesGrid() {
       const grid = document.getElementById('partiesGrid');
       grid.innerHTML = '';
 
-      const partyList = Object.values(partiesData);
-      if (partyList.length === 0) {
+      const entries = Object.entries(partiesData);
+      if (entries.length === 0) {
         grid.innerHTML = `<div class="col-span-full border border-dashed border-gray-800 rounded-2xl p-8 text-center bg-gray-900/40"><p class="text-sm text-gray-300 font-semibold">No Locations Listed</p></div>`;
         return;
       }
 
-      const entries = Object.entries(partiesData);
       if (activeSort === 'CLOSE' && userCoords) {
         entries.sort(([, a], [, b]) => partyDistance(a) - partyDistance(b));
       } else if (activeSort === 'NEW') {
@@ -1193,7 +1186,7 @@
             <span class="w-5 h-5 shrink-0 rounded-full bg-amber-500 text-gray-900 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
             <div class="min-w-0">
               <span class="font-bold text-white text-xs block">${escapeHtml(prop.name)}</span>
-              <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.createdAt || prop.submittedAt)}</p>
+              <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.createdAt)}</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -1346,7 +1339,7 @@
         lng: lng,
         status: 'QUIET',
         submittedAt: new Date().toISOString(),
-        createdAt: firebase.database.ServerValue.TIMESTAMP
+        createdAt: TIMESTAMP
       };
 
       db.ref().update({
@@ -1368,32 +1361,30 @@
       });
     }
 
+    // A freshly approved party starts with clean counters
+    function newPartyRecord(id, fields) {
+      return Object.assign({
+        id,
+        status: 'ACTIVE PARTY',
+        isPermanent: false,
+        crowdReportCount: 0,
+        crowdTotalSum: 0,
+        quietReportsCount: 0,
+        upvotes: 0,
+        downvotes: 0,
+        lastUpdatedAt: TIMESTAMP
+      }, fields);
+    }
+
     function approveProposal(propId) {
       db.ref(`proposals/${propId}`).once('value', (snapshot) => {
         const prop = snapshot.val();
         if (!prop) return;
 
-        const newParty = {
-          id: propId,
-          name: prop.name,
-          location: prop.location,
-          lat: prop.lat,
-          lng: prop.lng,
-          status: 'ACTIVE PARTY',
-          isPermanent: false,
-          crowdReportCount: 0,
-          crowdTotalSum: 0,
-          quietReportsCount: 0,
-          upvotes: 0,
-          downvotes: 0,
-          lastUpdatedAt: TIMESTAMP
-        };
-
-        const updates = {};
-        updates[`parties/${propId}`] = newParty;
-        updates[`proposals/${propId}`] = null;
-
-        db.ref().update(updates, (err) => {
+        db.ref().update({
+          [`parties/${propId}`]: newPartyRecord(propId, { name: prop.name, location: prop.location, lat: prop.lat, lng: prop.lng }),
+          [`proposals/${propId}`]: null
+        }, (err) => {
           if (!err) alert(`Approved "${prop.name}"! It is now live on the app.`);
         });
       });
@@ -1447,21 +1438,13 @@
         const name = document.getElementById('editPartyName').value.trim();
         const status = document.getElementById('editPartyStatus').value;
         db.ref().update({
-          [`parties/${proposalId}`]: {
-            id: proposalId,
+          [`parties/${proposalId}`]: newPartyRecord(proposalId, {
             name,
+            status,
             location: document.getElementById('editPartyLocation').value.trim() || 'Campus Area',
             lat: parseFloat(document.getElementById('editPartyLat').value) || DEFAULT_LAT,
-            lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
-            status,
-            isPermanent: false,
-            crowdReportCount: 0,
-            crowdTotalSum: 0,
-            quietReportsCount: 0,
-            upvotes: 0,
-            downvotes: 0,
-            lastUpdatedAt: TIMESTAMP
-          },
+            lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG
+          }),
           [`proposals/${proposalId}`]: null
         }).then(() => {
           closeAdminEditLocationModal();
@@ -1599,7 +1582,7 @@
     // Upvote / Downvote: one vote per party per visitor; picking the other option switches the vote,
     // clicking your current vote again removes it
     function getMyVote(partyId) {
-      return localStorage.getItem(`vote_${partyId}`) || sessionStorage.getItem(`voted_${partyId}`);
+      return localStorage.getItem(`vote_${partyId}`);
     }
 
     // Votes reset every morning at 8am (Apps Script) or from the Admin Panel; forget this browser's remembered votes
@@ -1607,7 +1590,6 @@
       const resetAt = Number(snap.val()) || 0;
       if (resetAt <= (Number(localStorage.getItem('votesResetSeen')) || 0)) return;
       Object.keys(localStorage).filter(k => k.startsWith('vote_')).forEach(k => localStorage.removeItem(k));
-      Object.keys(sessionStorage).filter(k => k.startsWith('voted_')).forEach(k => sessionStorage.removeItem(k));
       localStorage.setItem('votesResetSeen', String(resetAt));
       renderUI();
       updateModalVoteUI();
@@ -1634,7 +1616,6 @@
           // Save the choice first so the re-render triggered by this write shows the highlight
           if (newVote) localStorage.setItem(`vote_${partyId}`, newVote);
           else localStorage.removeItem(`vote_${partyId}`);
-          sessionStorage.removeItem(`voted_${partyId}`);
           return db.ref().update(updates).catch((err) => {
             if (previous) localStorage.setItem(`vote_${partyId}`, previous);
             else localStorage.removeItem(`vote_${partyId}`);
@@ -2132,25 +2113,6 @@
       }).catch(err => alert('Clear failed: ' + err.message));
     }
 
-    // One-time move of comments stored under parties/{id}/comments into comments/{id}
-    let migratingComments = false;
-    function migrateLegacyComments() {
-      if (migratingComments) return;
-      const updates = {};
-      Object.entries(partiesData).forEach(([partyId, party]) => {
-        if (!party.comments) return;
-        Object.entries(party.comments).forEach(([commentId, c]) => {
-          if (!c || typeof c.text !== 'string') return;
-          updates[`comments/${partyId}/${commentId}`] = { text: c.text.slice(0, 180), createdAt: Date.parse(c.timestamp) || serverNow() };
-        });
-        updates[`parties/${partyId}/comments`] = null;
-      });
-      if (Object.keys(updates).length === 0) return;
-      migratingComments = true;
-      db.ref().update(updates)
-        .catch(err => console.error('Comment migration failed:', err))
-        .finally(() => { migratingComments = false; });
-    }
 
     function openPartyDetailsModal(partyId) {
       selectedPartyId = partyId;
@@ -2395,49 +2357,47 @@
     }
 
     // Dynamic Feedback Modal & Header Button Logic
+    const FEEDBACK_STYLES = {
+      BUG: { label: 'Report Bug', icon: 'bug', color: 'red', placeholder: 'Describe what went wrong or steps to reproduce...' },
+      FEATURE: { label: 'Request Feature', icon: 'lightbulb', color: 'amber', placeholder: "Suggest an idea or describe a feature you'd like..." }
+    };
+
+    // Class strings are written out in full (not built from the color) so the Tailwind build keeps them
+    const FEEDBACK_CLASSES = {
+      red: {
+        headerBtn: 'text-red-400 border-red-500/30 hover:border-red-500/60',
+        iconBox: 'bg-red-500/20 p-2 rounded-xl text-red-400',
+        toggleOn: 'bg-red-600 text-white',
+        submit: 'bg-red-600 hover:bg-red-500'
+      },
+      amber: {
+        headerBtn: 'text-amber-400 border-amber-500/30 hover:border-amber-500/60',
+        iconBox: 'bg-amber-500/20 p-2 rounded-xl text-amber-400',
+        toggleOn: 'bg-amber-600 text-white',
+        submit: 'bg-amber-600 hover:bg-amber-500'
+      }
+    };
+
     function setFeedbackType(type) {
       feedbackType = type;
+      const style = FEEDBACK_STYLES[type];
+      const classes = FEEDBACK_CLASSES[style.color];
+      const toggleBase = 'flex-1 py-1.5 text-xs font-semibold rounded-lg transition';
 
-      const headerBtn = document.getElementById('headerFeedbackBtn');
-      const headerTitle = document.getElementById('headerFeedbackTitle');
-      const headerIcon = document.getElementById('headerFeedbackIcon');
-      
-      const bugToggleBtn = document.getElementById('feedbackTypeBug');
-      const featureToggleBtn = document.getElementById('feedbackTypeFeature');
-      const modalTitle = document.getElementById('feedbackModalTitle');
-      const modalIconBox = document.getElementById('feedbackModalIconBox');
-      const modalTextarea = document.getElementById('feedbackText');
-      const modalSubmitBtn = document.getElementById('feedbackSubmitBtn');
+      document.getElementById('headerFeedbackTitle').textContent = style.label;
+      document.getElementById('headerFeedbackIcon').setAttribute('data-lucide', style.icon);
+      document.getElementById('headerFeedbackBtn').className = `px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 border rounded-xl flex items-center gap-1.5 transition ${classes.headerBtn}`;
 
-      if (type === 'BUG') {
-        headerTitle.textContent = "Report Bug";
-        headerIcon.setAttribute('data-lucide', 'bug');
-        headerBtn.className = "px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-red-400 border border-red-500/30 hover:border-red-500/60 rounded-xl flex items-center gap-1.5 transition";
+      document.getElementById('feedbackModalTitle').textContent = style.label;
+      const iconBox = document.getElementById('feedbackModalIconBox');
+      iconBox.className = classes.iconBox;
+      iconBox.innerHTML = `<i data-lucide="${style.icon}" class="w-5 h-5"></i>`;
+      document.getElementById('feedbackTypeBug').className = `${toggleBase} ${type === 'BUG' ? classes.toggleOn : 'text-gray-400'}`;
+      document.getElementById('feedbackTypeFeature').className = `${toggleBase} ${type === 'FEATURE' ? classes.toggleOn : 'text-gray-400'}`;
+      document.getElementById('feedbackText').placeholder = style.placeholder;
+      document.getElementById('feedbackSubmitBtn').className = `px-4 py-2 text-xs text-white font-semibold rounded-lg ${classes.submit}`;
 
-        modalTitle.textContent = "Report Bug";
-        modalIconBox.className = "bg-red-500/20 p-2 rounded-xl text-red-400";
-        modalIconBox.innerHTML = '<i data-lucide="bug" class="w-5 h-5"></i>';
-        bugToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white transition';
-        featureToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
-        modalTextarea.placeholder = "Describe what went wrong or steps to reproduce...";
-        modalSubmitBtn.className = 'px-4 py-2 text-xs bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg';
-      } else {
-        headerTitle.textContent = "Request Feature";
-        headerIcon.setAttribute('data-lucide', 'lightbulb');
-        headerBtn.className = "px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 rounded-xl flex items-center gap-1.5 transition";
-
-        modalTitle.textContent = "Request Feature";
-        modalIconBox.className = "bg-amber-500/20 p-2 rounded-xl text-amber-400";
-        modalIconBox.innerHTML = '<i data-lucide="lightbulb" class="w-5 h-5"></i>';
-        featureToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white transition';
-        bugToggleBtn.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-gray-400 transition';
-        modalTextarea.placeholder = "Suggest an idea or describe a feature you'd like...";
-        modalSubmitBtn.className = 'px-4 py-2 text-xs bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg';
-      }
-
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     }
 
     function handleFeedbackSubmit(e) {
@@ -2465,6 +2425,11 @@
     function closeFeedbackModal() { document.getElementById('feedbackModal').classList.add('hidden'); }
 
     // Helpers & Utilities
+    // Draws any <i data-lucide="..."> icons added since the last call
+    function refreshIcons() {
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;") : ''; }
     function toCount(val) { const n = Number(val); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; }
     function timeAgo(value) {
@@ -2582,9 +2547,7 @@
       setFeedbackType('FEATURE');
       renderUI();
       setInterval(renderUI, 60 * 1000);
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-      }
+      refreshIcons();
     });
   </script>
 </body>
