@@ -17,23 +17,26 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+# Actions are pinned to exact commits (version noted alongside) so a moved tag can't change what runs.
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main (live site)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: main
           path: main-src
+          persist-credentials: false
 
       - name: Checkout preview branch
         id: preview
         continue-on-error: true
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: preview
           path: preview-src
+          persist-credentials: false
 
       - name: Assemble site
         run: |
@@ -44,15 +47,24 @@ jobs:
             rsync -a --exclude '.git' --exclude '.github' --exclude '.gitignore' preview-src/ _site/preview/
           fi
 
-      # Faster loading: build a small minified stylesheet with only the classes each page
-      # uses, instead of running the ~400 KB Tailwind CDN script in every visitor's browser
+      # Faster loading: build a small minified stylesheet with only the classes each page uses,
+      # instead of running the ~400 KB Tailwind CDN script in every visitor's browser.
+      # Uses Tailwind's standalone program, checked against its published SHA-256 before it runs.
       - name: Build Tailwind CSS
+        env:
+          TAILWIND_VERSION: v3.4.17
+          TAILWIND_SHA256: 7d24f7fa191d2193b78cd5f5a42a6093e14409521908529f42d80b11fde1f1d4
         run: |
+          curl -sSL -o /tmp/tailwindcss "https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-x64"
+          echo "${TAILWIND_SHA256}  /tmp/tailwindcss" | sha256sum --check --strict
+          chmod +x /tmp/tailwindcss
           printf '@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' > /tmp/tailwind-input.css
           for dir in _site _site/preview; do
             if [ -f "$dir/index.html" ] && grep -q 'cdn.tailwindcss.com/3.4.17' "$dir/index.html"; then
-              npx --yes tailwindcss@3.4.17 -i /tmp/tailwind-input.css -o "$dir/tailwind.css" --content "$dir/index.html" --minify
+              /tmp/tailwindcss -i /tmp/tailwind-input.css -o "$dir/tailwind.css" --content "$dir/index.html" --minify
               sed -i 's|<script src="https://cdn.tailwindcss.com/3.4.17"></script>|<link rel="stylesheet" href="tailwind.css">|' "$dir/index.html"
+              # The CDN is only needed for local development, so drop it from the security policy
+              sed -i 's| https://cdn.tailwindcss.com||g' "$dir/index.html"
             fi
           done
 
@@ -79,13 +91,13 @@ jobs:
           done
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@1f0c5cde4bc74cd7e1254d0cb4de8d49e9068c7d # v4.0.0
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
