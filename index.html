@@ -450,9 +450,10 @@
               <i data-lucide="eraser" class="w-4 h-4"></i> Cleanup Tools
             </h3>
             <div class="flex flex-wrap gap-2">
+              <button onclick="resetAllVotes()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Reset all votes now</button>
               <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
             </div>
-            <p class="text-[10px] text-gray-500 mt-2">Comments delete themselves after 12 hours. Use "Reset votes" on a location in the Locations tab to zero its 👍/👎.</p>
+            <p class="text-[10px] text-gray-500 mt-2">Comments delete themselves after 12 hours, and all votes reset every day at 8am. Use "Reset votes" on a location in the Locations tab to zero its 👍/👎.</p>
           </div>
 
           <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
@@ -1503,6 +1504,17 @@
       return localStorage.getItem(`vote_${partyId}`) || sessionStorage.getItem(`voted_${partyId}`);
     }
 
+    // Votes reset every morning at 8am (Apps Script) or from the Admin Panel; forget this browser's remembered votes
+    db.ref('config/votesResetAt').on('value', (snap) => {
+      const resetAt = Number(snap.val()) || 0;
+      if (resetAt <= (Number(localStorage.getItem('votesResetSeen')) || 0)) return;
+      Object.keys(localStorage).filter(k => k.startsWith('vote_')).forEach(k => localStorage.removeItem(k));
+      Object.keys(sessionStorage).filter(k => k.startsWith('voted_')).forEach(k => sessionStorage.removeItem(k));
+      localStorage.setItem('votesResetSeen', String(resetAt));
+      renderUI();
+      updateModalVoteUI();
+    }, () => {});
+
     function castPartyVote(partyId, voteType) {
       const party = partiesData[partyId];
       if (!party) return;
@@ -1923,6 +1935,16 @@
       }).then(() => alert('Votes reset.'), err => alert('Reset failed: ' + err.message));
     }
 
+
+    function resetAllVotes() {
+      if (!confirm("Reset every party's 👍/👎 to 0 now?")) return;
+      const updates = { votes: null, 'config/votesResetAt': TIMESTAMP };
+      Object.keys(partiesData).forEach(id => {
+        updates[`parties/${id}/upvotes`] = 0;
+        updates[`parties/${id}/downvotes`] = 0;
+      });
+      db.ref().update(updates).then(() => alert('All votes reset.'), err => alert('Reset failed: ' + err.message));
+    }
 
     function clearOldReportHistory() {
       db.ref('reportLog').orderByChild('at').endAt(serverNow() - 30 * DAY_MS).once('value').then((snap) => {
