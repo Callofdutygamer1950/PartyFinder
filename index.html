@@ -398,26 +398,34 @@
 
     // Atomic Database Seed
     function seedPermanentLocations() {
-      db.ref('parties').once('value', (snapshot) => {
-        const val = snapshot.val() || {};
-        const updates = {};
-        let needsUpdate = false;
+  db.ref('parties').once('value', (snapshot) => {
+    const val = snapshot.val() || {};
+    const updates = {};
+    let needsUpdate = false;
 
-        Object.keys(PERMANENT_LOCATIONS).forEach(id => {
-          if (!val[id]) {
-            updates[`parties/${id}`] = {
-              ...PERMANENT_LOCATIONS[id],
-              lastUpdated: new Date().toISOString()
-            };
-            needsUpdate = true;
-          }
-        });
+    Object.keys(PERMANENT_LOCATIONS).forEach(id => {
+      if (!val[id]) {
+        updates[`parties/${id}`] = {
+          id: PERMANENT_LOCATIONS[id].id,
+          name: PERMANENT_LOCATIONS[id].name,
+          location: PERMANENT_LOCATIONS[id].location,
+          status: PERMANENT_LOCATIONS[id].status,
+          isPermanent: true,
+          lat: PERMANENT_LOCATIONS[id].lat,   // Pass Latitude
+          lng: PERMANENT_LOCATIONS[id].lng,   // Pass Longitude
+          crowdReportCount: 0,
+          crowdTotalSum: 0,
+          lastUpdated: new Date().toISOString()
+        };
+        needsUpdate = true;
+      }
+    });
 
-        if (needsUpdate) {
-          db.ref().update(updates);
-        }
-      });
+    if (needsUpdate) {
+      db.ref().update(updates);
     }
+  });
+}
 
     seedPermanentLocations();
 
