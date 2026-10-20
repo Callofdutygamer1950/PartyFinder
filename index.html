@@ -454,8 +454,26 @@
     let mapMarkers = [];
     let currentAdminUser = null; // signed-in host account; anonymous visitors are never admins
     let serverTimeOffset = 0;
-    let resolveAuthReady;
-    const authReady = new Promise(resolve => { resolveAuthReady = resolve; });
+    let resolveAuthInitialized;
+    const authInitialized = new Promise(resolve => { resolveAuthInitialized = resolve; });
+    let signInPromise = null;
+
+    // Resolves with the signed-in user (anonymous or admin), signing in anonymously if needed
+    function whenSignedIn() {
+      return authInitialized.then(() => {
+        if (auth.currentUser) return auth.currentUser;
+        if (!signInPromise) {
+          signInPromise = auth.signInAnonymously()
+            .then(cred => cred.user)
+            .catch(err => {
+              signInPromise = null;
+              console.error('Anonymous sign-in failed:', err);
+              throw new Error(`Couldn't connect you to Drop the Addy (${err.code || err.message}). Please refresh the page and try again.`);
+            });
+        }
+        return signInPromise;
+      });
+    }
 
     const REPORT_COOLDOWN_MS = 15 * 60 * 1000;
     const DEAD_AFTER_MS = 6 * 60 * 60 * 1000;
@@ -497,11 +515,8 @@
 
     // Auth State Tracking: every visitor gets a silent anonymous account so the rules can rate-limit per user
     auth.onAuthStateChanged((user) => {
-      if (!user) {
-        auth.signInAnonymously().catch(err => console.error('Anonymous sign-in failed:', err));
-      } else {
-        resolveAuthReady();
-      }
+      resolveAuthInitialized();
+      if (!user) whenSignedIn().catch(() => {});
       currentAdminUser = user && !user.isAnonymous ? user : null;
       const navText = document.getElementById('adminNavText');
       const navIcon = document.getElementById('adminNavIcon');
@@ -769,7 +784,7 @@
         return;
       }
 
-      authReady.then(() => submitProposal(name, location, lat, lng));
+      whenSignedIn().then(() => submitProposal(name, location, lat, lng)).catch(err => alert(err.message));
     }
 
     function submitProposal(name, location, lat, lng) {
@@ -927,7 +942,7 @@
       const party = partiesData[partyId];
       if (!party) return;
 
-      authReady.then(() => {
+      whenSignedIn().then(() => {
         const uid = auth.currentUser.uid;
         const isAdmin = !!currentAdminUser;
         const checks = isAdmin ? Promise.resolve([]) : Promise.all([
@@ -999,7 +1014,7 @@
       const party = partiesData[partyId];
       if (!party) return;
 
-      authReady.then(() => {
+      whenSignedIn().then(() => {
         const uid = auth.currentUser.uid;
         return db.ref(`votes/${partyId}/${uid}`).once('value').then((snap) => {
           const previous = snap.val();
@@ -1118,7 +1133,7 @@
       }
 
       const partyId = selectedPartyId;
-      authReady.then(() => {
+      whenSignedIn().then(() => {
         const commentId = db.ref(`comments/${partyId}`).push().key;
         return db.ref().update({
           [`comments/${partyId}/${commentId}`]: { text: commentText, createdAt: TIMESTAMP },
@@ -1471,7 +1486,7 @@
       const text = document.getElementById('feedbackText').value.trim();
       const path = feedbackType === 'BUG' ? 'bugReports' : 'featureRequests';
       
-      authReady.then(() => db.ref(path).push({ description: text, submittedAt: new Date().toISOString(), createdAt: TIMESTAMP }, (error) => {
+      whenSignedIn().then(() => db.ref(path).push({ description: text, submittedAt: new Date().toISOString(), createdAt: TIMESTAMP }, (error) => {
         if (!error) {
           const isBug = feedbackType === 'BUG';
 
@@ -1481,7 +1496,7 @@
         } else {
           alert('Failed to submit: ' + error.message);
         }
-      }));
+      })).catch(err => alert(err.message));
     }
 
     function openFeedbackModal() { document.getElementById('feedbackModal').classList.remove('hidden'); }
