@@ -1,0 +1,2 @@
+/*
+  Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https: wss:; connect-src 'self' https: wss:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:;
