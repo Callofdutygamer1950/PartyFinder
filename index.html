@@ -372,34 +372,41 @@
     const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
     // Hardcoded Staple Locations
-    const PERMANENT_LOCATIONS = [
-      { id: "perm_grove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540 },
-      { id: "perm_ivy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510 },
-      { id: "perm_heights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490 }
-    ];
+    const PERMANENT_LOCATIONS = {
+      "perm_grove": { id: "perm_grove", name: "The Grove", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0650, lng: -80.0540, crowdReportCount: 0, crowdTotalSum: 0 },
+      "perm_ivy": { id: "perm_ivy", name: "The Ivy", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0620, lng: -80.0510, crowdReportCount: 0, crowdTotalSum: 0 },
+      "perm_heights": { id: "perm_heights", name: "The Heights", location: "Slippery Rock, PA", status: "QUIET", isPermanent: true, lat: 41.0670, lng: -80.0490, crowdReportCount: 0, crowdTotalSum: 0 }
+    };
 
-    // Seed permanent locations into Firebase if not present
+    // Atomic Seed & Local Fallback Merge
     function seedPermanentLocations() {
       db.ref('parties').once('value', (snapshot) => {
-        const existing = snapshot.val() || {};
-        PERMANENT_LOCATIONS.forEach(loc => {
-          if (!existing[loc.id]) {
-            db.ref(`parties/${loc.id}`).set({
-              ...loc,
-              crowdReportCount: 0,
-              crowdTotalSum: 0,
+        const val = snapshot.val() || {};
+        const updates = {};
+        let needsUpdate = false;
+
+        Object.keys(PERMANENT_LOCATIONS).forEach(id => {
+          if (!val[id]) {
+            updates[`parties/${id}`] = {
+              ...PERMANENT_LOCATIONS[id],
               lastUpdated: new Date().toISOString()
-            });
+            };
+            needsUpdate = true;
           }
         });
+
+        if (needsUpdate) {
+          db.ref().update(updates);
+        }
       });
     }
 
     seedPermanentLocations();
 
-    // Realtime Database Sync
+    // Sync database & merge permanent defaults locally if missing from initial payload
     db.ref('parties').on('value', (snapshot) => {
-      partiesData = snapshot.val() || {};
+      const rawVal = snapshot.val() || {};
+      partiesData = { ...PERMANENT_LOCATIONS, ...rawVal };
       renderUI();
       renderAdminLocationsList();
     });
@@ -443,7 +450,7 @@
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
-                ${party.isPermanent ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-purple-900/60 text-purple-300 border border-purple-500/30">Staple</span>` : ''}
+                ${party.isPermanent ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-purple-900/60 text-purple-300 border border-purple-500/30 font-semibold">Staple</span>` : ''}
               </div>
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${party.status}</span>
             </div>
@@ -461,9 +468,9 @@
       });
     }
 
-    // Host Admin Location Management
     function renderAdminLocationsList() {
       const container = document.getElementById('adminLocationsList');
+      if (!container) return;
       container.innerHTML = '';
 
       Object.values(partiesData).forEach(party => {
@@ -473,7 +480,7 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="font-bold text-white text-xs">${escapeHtml(party.name)}</span>
-              ${party.isPermanent ? `<span class="text-[9px] text-purple-400 font-semibold">(Permanent)</span>` : ''}
+              ${party.isPermanent ? `<span class="text-[9px] text-purple-400 font-semibold">(Permanent Staple)</span>` : ''}
               <span class="text-[10px] px-2 py-0.5 rounded ${party.status === 'ACTIVE PARTY' ? 'bg-pink-500/20 text-pink-400' : 'bg-gray-700 text-gray-400'}">${party.status}</span>
             </div>
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}</p>
@@ -551,7 +558,39 @@
       }
     }
 
-    // Leaflet OpenStreetMap bounded to 3 Miles of Slippery Rock
+    // Status Report Handler
+    function handleStatusSubmit(e) {
+      e.preventDefault();
+      const partyId = document.getElementById('reportPartySelect').value;
+      const statusType = document.querySelector('input[name="statusType"]:checked').value;
+      const headcountInput = parseInt(document.getElementById('reportHeadcount').value) || 0;
+
+      const party = partiesData[partyId];
+      if (!party) return;
+
+      const newStatus = statusType === 'party' ? 'ACTIVE PARTY' : 'QUIET';
+      const currentReports = party.crowdReportCount || 0;
+      const currentSum = party.crowdTotalSum || 0;
+
+      const updates = {
+        status: newStatus,
+        lastUpdated: new Date().toISOString()
+      };
+
+      if (headcountInput > 0) {
+        updates.crowdReportCount = currentReports + 1;
+        updates.crowdTotalSum = currentSum + Math.min(headcountInput, 2000);
+      }
+
+      db.ref(`parties/${partyId}`).update(updates, (err) => {
+        if (!err) {
+          alert(`Status for "${party.name}" updated to ${newStatus}!`);
+          document.getElementById('reportForm').reset();
+        }
+      });
+    }
+
+    // Leaflet OpenStreetMap bounded to 3 Miles
     function initMap() {
       if (map) return;
 
@@ -627,8 +666,8 @@
       mapMarkers = [];
 
       Object.values(partiesData).forEach(party => {
-        const lat = party.lat || DEFAULT_LAT + (Math.random() - 0.5) * 0.02;
-        const lng = party.lng || DEFAULT_LNG + (Math.random() - 0.5) * 0.02;
+        const lat = party.lat || DEFAULT_LAT;
+        const lng = party.lng || DEFAULT_LNG;
         const isParty = party.status === 'ACTIVE PARTY';
 
         const marker = L.circleMarker([lat, lng], {
@@ -840,6 +879,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       setFeedbackType('FEATURE');
+      renderUI();
       lucide.createIcons();
     });
   </script>
