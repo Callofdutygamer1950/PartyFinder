@@ -1005,7 +1005,8 @@
       }).catch(err => alert('Could not post your report: ' + err.message));
     }
 
-    // Upvote / Downvote: one vote per party per browser; picking the other option switches the vote
+    // Upvote / Downvote: one vote per party per visitor; picking the other option switches the vote,
+    // clicking your current vote again removes it
     function getMyVote(partyId) {
       return localStorage.getItem(`vote_${partyId}`) || sessionStorage.getItem(`voted_${partyId}`);
     }
@@ -1018,25 +1019,19 @@
         const uid = auth.currentUser.uid;
         return db.ref(`votes/${partyId}/${uid}`).once('value').then((snap) => {
           const previous = snap.val();
-          if (previous === voteType) {
-            localStorage.setItem(`vote_${partyId}`, voteType);
-            renderUI();
-            updateModalVoteUI();
-            return;
-          }
+          const removing = previous === voteType;
+          const newVote = removing ? null : voteType;
 
-          const field = voteType === 'up' ? 'upvotes' : 'downvotes';
-          const updates = {
-            [`votes/${partyId}/${uid}`]: voteType,
-            [`parties/${partyId}/${field}`]: increment(1)
-          };
+          const updates = { [`votes/${partyId}/${uid}`]: newVote };
+          if (!removing) updates[`parties/${partyId}/${voteType === 'up' ? 'upvotes' : 'downvotes'}`] = increment(1);
           if (previous) {
             const prevField = previous === 'up' ? 'upvotes' : 'downvotes';
             if (toCount(party[prevField]) > 0) updates[`parties/${partyId}/${prevField}`] = increment(-1);
           }
 
-          // Save the choice first so the re-render triggered by this write shows it highlighted
-          localStorage.setItem(`vote_${partyId}`, voteType);
+          // Save the choice first so the re-render triggered by this write shows the highlight
+          if (newVote) localStorage.setItem(`vote_${partyId}`, newVote);
+          else localStorage.removeItem(`vote_${partyId}`);
           sessionStorage.removeItem(`voted_${partyId}`);
           return db.ref().update(updates).catch((err) => {
             if (previous) localStorage.setItem(`vote_${partyId}`, previous);
