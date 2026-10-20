@@ -625,7 +625,7 @@
         if (auth.currentUser) return auth.currentUser;
         if (!signInPromise) {
           signInPromise = auth.signInAnonymously()
-            .then(cred => cred.user)
+            .then(cred => { signInPromise = null; return cred.user; })
             .catch(err => {
               signInPromise = null;
               console.error('Anonymous sign-in failed:', err);
