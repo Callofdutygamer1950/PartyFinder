@@ -45,6 +45,10 @@ jobs:
           if [ "${{ steps.preview.outcome }}" = "success" ]; then
             mkdir -p _site/preview
             rsync -a --exclude '.git' --exclude '.github' --exclude '.gitignore' preview-src/ _site/preview/
+            # Give the preview its own app identity so installing it never replaces the real app
+            if [ -f _site/preview/manifest.webmanifest ]; then
+              sed -i 's|"id": "/PartyFinder/"|"id": "/PartyFinder/preview/"|' _site/preview/manifest.webmanifest
+            fi
           fi
 
       # Faster loading: build a small minified stylesheet with only the classes each page uses,
