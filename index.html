@@ -200,6 +200,7 @@
         <button onclick="handleAdminButtonClick()" id="adminNavBtn" class="px-3.5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center gap-1.5 transition">
           <i data-lucide="lock" id="adminNavIcon" class="w-3.5 h-3.5"></i>
           <span id="adminNavText">Host Login</span>
+          <span id="adminNavBadge" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
         </button>
       </div>
 
@@ -390,63 +391,32 @@
         <h2 class="text-lg font-bold text-white">Host Admin Panel</h2>
         <button onclick="handleAdminLogout()" class="text-xs text-red-400 font-medium hover:underline">Log Out</button>
       </div>
-      <div class="flex-grow overflow-y-auto space-y-6 pr-1">
-        <!-- Pending Party Proposals Review Queue -->
-        <div class="bg-gray-800/60 border border-purple-500/30 rounded-xl p-4">
-          <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <i data-lucide="clock" class="w-4 h-4"></i> Pending Party Proposals
-          </h3>
+      <div class="flex gap-1 overflow-x-auto pb-3 mb-3 border-b border-gray-800 shrink-0">
+          <button data-admin-tab="proposals" onclick="showAdminTab('proposals')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Proposals<span id="adminTabBadge-proposals" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span></button>
+          <button data-admin-tab="comments" onclick="showAdminTab('comments')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Comments<span id="adminTabBadge-comments" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span></button>
+          <button data-admin-tab="locations" onclick="showAdminTab('locations')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Locations</button>
+          <button data-admin-tab="stats" onclick="showAdminTab('stats')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Stats</button>
+          <button data-admin-tab="tools" onclick="showAdminTab('tools')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Tools</button>
+      </div>
+      <div class="flex-grow overflow-y-auto pr-1">
+        <!-- Proposals -->
+        <div data-admin-pane="proposals" class="space-y-3">
+          <div id="proposalReviewMap" class="h-48 rounded-xl border border-gray-700 overflow-hidden"></div>
           <div id="adminProposalsList" class="space-y-2">
             <p class="text-xs text-gray-500 italic">No pending party proposals.</p>
           </div>
         </div>
 
-        <!-- Party Stats -->
-        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-          <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Party Stats
-          </h3>
-          <div id="adminStats" class="space-y-3 text-xs text-gray-300">
-            <p class="text-gray-500 italic">Loading stats...</p>
-          </div>
-        </div>
-
-        <!-- Cleanup Tools -->
-        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-          <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <i data-lucide="eraser" class="w-4 h-4"></i> Cleanup Tools
-          </h3>
-          <div class="flex flex-wrap gap-2">
-            <button onclick="deleteOldComments()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Delete comments older than 7 days</button>
-            <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
-          </div>
-          <p class="text-[10px] text-gray-500 mt-2">Use "Reset votes" on a location below to zero its 👍/👎.</p>
-        </div>
-
-        <!-- Comment Moderation -->
-        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-          <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <i data-lucide="message-square" class="w-4 h-4"></i> Moderate Comments
-          </h3>
-          <div id="adminCommentsList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+        <!-- Comments -->
+        <div data-admin-pane="comments" class="hidden space-y-2">
+          <p class="text-[10px] text-gray-500">Flagged and auto-flagged comments are listed first. 🤖 = caught by the word filter.</p>
+          <div id="adminCommentsList" class="space-y-2">
             <p class="text-xs text-gray-500 italic">No comments yet.</p>
           </div>
         </div>
 
-        <!-- Fundraiser Goal Editor -->
-        <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-          <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Manage iOS App Fundraiser</h3>
-          <div class="flex items-center gap-3">
-            <div class="flex-1">
-              <label class="block text-[10px] text-gray-400 mb-1">Amount Raised ($)</label>
-              <input type="number" id="adminFundraiserInput" placeholder="0" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white">
-            </div>
-            <button onclick="updateFundraiserAmount()" class="mt-4 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white text-xs font-semibold rounded-lg">Update Raised Total</button>
-          </div>
-        </div>
-
-        <!-- Location Management Section -->
-        <div>
+        <!-- Locations -->
+        <div data-admin-pane="locations" class="hidden">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider">Manage & Edit Campus Locations</h3>
             <button onclick="openAdminAddLocationModal()" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1">
@@ -455,6 +425,48 @@
           </div>
           <div id="adminLocationsList" class="space-y-2"></div>
         </div>
+
+        <!-- Stats -->
+        <div data-admin-pane="stats" class="hidden">
+          <div id="adminStats" class="space-y-3 text-xs text-gray-300">
+            <p class="text-gray-500 italic">Loading stats...</p>
+          </div>
+        </div>
+
+        <!-- Tools -->
+        <div data-admin-pane="tools" class="hidden space-y-4">
+          <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+            <h3 class="text-xs font-bold text-red-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <i data-lucide="shield-alert" class="w-4 h-4"></i> Blocked Words
+            </h3>
+            <p class="text-[10px] text-gray-500 mb-2">One word or phrase per line. Matches whole words, plus look-alike spellings (f4g, extra letters). Used when visitors post, and by the server-side filter every 5 minutes.</p>
+            <p id="blockedWordsStatus" class="text-[10px] text-amber-400 mb-2"></p>
+            <textarea id="blockedWordsInput" rows="8" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white font-mono"></textarea>
+            <button onclick="saveBlockedWords()" class="mt-2 px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs rounded-lg font-semibold">Save Blocked Words</button>
+          </div>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+            <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <i data-lucide="eraser" class="w-4 h-4"></i> Cleanup Tools
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="deleteOldComments()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Delete comments older than 7 days</button>
+              <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-2">Use "Reset votes" on a location in the Locations tab to zero its 👍/👎.</p>
+          </div>
+
+          <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+            <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Manage iOS App Fundraiser</h3>
+            <div class="flex items-center gap-3">
+              <div class="flex-1">
+                <label class="block text-[10px] text-gray-400 mb-1">Amount Raised ($)</label>
+                <input type="number" id="adminFundraiserInput" placeholder="0" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white">
+              </div>
+              <button onclick="updateFundraiserAmount()" class="mt-4 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white text-xs font-semibold rounded-lg">Update Raised Total</button>
+            </div>
+          </div>
+        </div>
       </div>
       <button onclick="closeHostModal()" class="px-4 py-2 text-xs bg-gray-800 text-gray-300 rounded-lg mt-4 align-self-end">Close</button>
     </div>
@@ -462,10 +474,11 @@
 
   <!-- Admin Edit Location Modal -->
   <div id="adminEditLocationModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <h2 id="adminLocationModalHeader" class="text-lg font-bold text-white mb-3">Edit Location</h2>
       <form onsubmit="handleAdminSaveLocation(event)" class="space-y-3">
         <input type="hidden" id="editPartyId">
+        <input type="hidden" id="editProposalId">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Location / Party Name</label>
           <input type="text" id="editPartyName" required class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
@@ -491,9 +504,13 @@
             <input type="number" step="any" id="editPartyLng" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-white">
           </div>
         </div>
+        <div>
+          <div id="editPartyMap" class="h-44 rounded-xl border border-gray-700 overflow-hidden"></div>
+          <p class="text-[10px] text-gray-500 mt-1">Click the map or drag the pin to set the exact spot.</p>
+        </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeAdminEditLocationModal()" class="px-3 py-1.5 text-xs text-gray-400">Cancel</button>
-          <button type="submit" class="px-4 py-1.5 text-xs bg-purple-600 text-white font-semibold rounded-lg">Save Changes</button>
+          <button type="submit" id="editSaveBtn" class="px-4 py-1.5 text-xs bg-purple-600 text-white font-semibold rounded-lg">Save Changes</button>
         </div>
       </form>
     </div>
@@ -731,16 +748,37 @@
     const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
     // Slur and Profanity Filter List
-    const BLOCKED_WORDS = [
-      "aperest", "coondog", "dogfucker", "Dothead", "Oreo", "assjockey", "cuntlicker", "kunt", "shithead", "anilingus", "asslick", "bulldyke", "Camel-Jockey", "Ching-Chong", "dickless", "fatso", "fudgepacker", "he-she", "niggaracci", "phuk", "Towel-head", "white-negro", "niggerous", "Bluegum", "fag", "shitskinned", "asswhore", "tard", "zipperhead", "Cracker", "Jewish-lightning", "asslicker", "cocksmoker", "cocksucker", "crippled", "cumfest", "cuntsucker", "doggystyle", "farm-nigger", "honkers", "Northern-Monkey", "poon", "titfuck", "sweat-like-a-nigger", "Christfag", "cuntboy", "Niggerian", "niggerbitch", "niggerboy", "niggercide", "niggerdick", "shitskin", "twat", "Chink", "cumskin", "fuuck", "niggerosity", "niggerjew", "anal", "antinigger", "Arabush", "Buddhahead", "Democunt", "dike", "Golliwog", "homobangers", "Indognesial", "Mexicoon", "phuking", "phukking", "asspirate", "felatio", "transgenderedness", "Porch-monkey", "shitnigger", "rape", "culture", "arabs", "bastard", "blindie", "bulldike", "butchdike", "camelfucker", "Chinaman", "cumshot", "dripdick", "fag-mag", "gatorbait", "hitlerism", "Jew-down", "Jewnited-Snakes", "Jewy", "leftover", "mentally-retarded", "midget", "nigga-please", "Nigger-toe", "niggeration", "niggerette", "niggerphile", "niggerspeak", "nizzle", "Prairie-nigger", "randy", "she-he", "shemale", "slam-pig", "snigger", "spaz", "Spearchucker", "white-nigger", "yellow-nigger", "zhidovka", "stfu", "nigger-rigged", "Africoon-Americoon", "Jigaboo", "kyke", "niggerdom", "assfuck", "assklown", "balllicker", "Jewfucker", "jiggabo", "nigfant", "niggergram", "porchmonkey", "Sand-nigger", "yard-ape", "queer", "asspuppies", "black-trash", "blackman", "fatass", "fucktardedly", "jism", "niggling", "nigglings", "Paki", "shitface", "titfucker", "Turd-World", "twobitwhore", "willy", "niggerfuck", "sixtynine", "ABCD", "China-doll", "coon", "Curry-muncher", "fuckwhore", "pussy", "trap", "Christcuck", "fatfuck", "Oriental", "niggerhead", "assfucker", "asshole", "asshore", "Aunt-Jemima", "bastardess", "beaner", "bitching", "boobs", "butt-fuck", "buttpirate", "Chernozhopy", "choad", "Citations:niggerdick", "cockblock", "cockfight", "cooter", "dick", "dickhead", "douchebag", "dumbass", "Dune-coon", "dyke", "fuckity-bye", "Gypsy", "lactate", "lesbo", "Malingsialan", "negroid", "niggerization", "niggerskin", "Piefke", "sandnigger", "slutt", "snownigger", "timbernigger", "transgendered", "troon", "Uncle-Tom", "Zhyd", "Zionazi", "nigga", "nigger"
+    // Default list, used until a host saves their own list from the Tools tab
+    const DEFAULT_BLOCKED_WORDS = [
+      "aperest", "coondog", "dogfucker", "Dothead", "Oreo", "assjockey", "cuntlicker", "kunt", "shithead", "anilingus", "asslick", "bulldyke", "Camel-Jockey", "Ching-Chong", "dickless", "fatso", "fudgepacker", "he-she", "niggaracci", "phuk", "Towel-head", "white-negro", "niggerous", "Bluegum", "fag", "faggot", "shitskinned", "asswhore", "tard", "zipperhead", "Cracker", "Jewish-lightning", "asslicker", "cocksmoker", "cocksucker", "crippled", "cumfest", "cuntsucker", "doggystyle", "farm-nigger", "honkers", "Northern-Monkey", "poon", "titfuck", "sweat-like-a-nigger", "Christfag", "cuntboy", "Niggerian", "niggerbitch", "niggerboy", "niggercide", "niggerdick", "shitskin", "twat", "Chink", "cumskin", "fuuck", "niggerosity", "niggerjew", "anal", "antinigger", "Arabush", "Buddhahead", "Democunt", "dike", "Golliwog", "homobangers", "Indognesial", "Mexicoon", "phuking", "phukking", "asspirate", "felatio", "transgenderedness", "Porch-monkey", "shitnigger", "rape", "culture", "arabs", "bastard", "blindie", "bulldike", "butchdike", "camelfucker", "Chinaman", "cumshot", "dripdick", "fag-mag", "gatorbait", "hitlerism", "Jew-down", "Jewnited-Snakes", "Jewy", "leftover", "mentally-retarded", "midget", "nigga-please", "Nigger-toe", "niggeration", "niggerette", "niggerphile", "niggerspeak", "nizzle", "Prairie-nigger", "randy", "she-he", "shemale", "slam-pig", "snigger", "spaz", "Spearchucker", "white-nigger", "yellow-nigger", "zhidovka", "stfu", "nigger-rigged", "Africoon-Americoon", "Jigaboo", "kyke", "niggerdom", "assfuck", "assklown", "balllicker", "Jewfucker", "jiggabo", "nigfant", "niggergram", "porchmonkey", "Sand-nigger", "yard-ape", "queer", "asspuppies", "black-trash", "blackman", "fatass", "fucktardedly", "jism", "niggling", "nigglings", "Paki", "shitface", "titfucker", "Turd-World", "twobitwhore", "willy", "niggerfuck", "sixtynine", "ABCD", "China-doll", "coon", "Curry-muncher", "fuckwhore", "pussy", "trap", "Christcuck", "fatfuck", "Oriental", "niggerhead", "assfucker", "asshole", "asshore", "Aunt-Jemima", "bastardess", "beaner", "bitching", "boobs", "butt-fuck", "buttpirate", "Chernozhopy", "choad", "Citations:niggerdick", "cockblock", "cockfight", "cooter", "dick", "dickhead", "douchebag", "dumbass", "Dune-coon", "dyke", "fuckity-bye", "Gypsy", "lactate", "lesbo", "Malingsialan", "negroid", "niggerization", "niggerskin", "Piefke", "sandnigger", "slutt", "snownigger", "timbernigger", "transgendered", "troon", "Uncle-Tom", "Zhyd", "Zionazi", "nigga", "nigger"
     ];
 
+    // Look-alike spellings: digits/symbols become letters (f4g -> fag), and every letter may repeat (faaag)
+    const LOOKALIKES = { '4': 'a', '@': 'a', '3': 'e', '1': 'i', '!': 'i', '|': 'i', '0': 'o', '$': 's', '5': 's', '7': 't', '+': 't' };
+    function normalizeForFilter(text) {
+      return String(text).toLowerCase().replace(/[4@31!|0$57+]/g, ch => LOOKALIKES[ch]).replace(/[^a-z]+/g, ' ').trim();
+    }
+    function buildBlockedMatcher(words) {
+      const patterns = words
+        .map(w => normalizeForFilter(w))
+        .filter(Boolean)
+        .map(w => w.split('').map(ch => (ch === ' ' ? ' ?' : `${ch}+`)).join(''));
+      return patterns.length ? new RegExp(`\\b(?:${patterns.join('|')})\\b`) : null;
+    }
+
+    let blockedWords = DEFAULT_BLOCKED_WORDS;
+    let blockedWordsFromDb = false;
+    let blockedMatcher = buildBlockedMatcher(blockedWords);
+    db.ref('config/blockedWords').on('value', (snap) => {
+      const saved = snap.val();
+      blockedWordsFromDb = typeof saved === 'string';
+      blockedWords = blockedWordsFromDb ? saved.split('\n').map(w => w.trim()).filter(Boolean) : DEFAULT_BLOCKED_WORDS;
+      blockedMatcher = buildBlockedMatcher(blockedWords);
+      renderBlockedWordsEditor();
+    }, () => renderBlockedWordsEditor());
+
     function containsProfanity(text) {
-      const lowerText = text.toLowerCase();
-      return BLOCKED_WORDS.some(word => {
-        const regex = new RegExp(`\\b${word}\\b`, 'i');
-        return regex.test(lowerText);
-      });
+      return !!blockedMatcher && blockedMatcher.test(normalizeForFilter(text));
     }
 
     // Auth State Tracking: every visitor gets a silent anonymous account so the rules can rate-limit per user
@@ -774,9 +812,20 @@
         if (navText) navText.textContent = 'Host Login';
         if (navIcon) navIcon.setAttribute('data-lucide', 'lock');
         renderAdminProposalsList({});
+        adminCommentsData = {};
+        adminFlagsData = {};
         closeHostModal();
       }
       if (selectedPartyId) loadPartyComments(selectedPartyId);
+      updateAdminBadges();
+      if (pendingAdminTab && user) {
+        if (currentAdminUser) {
+          openHostPanel(pendingAdminTab);
+          pendingAdminTab = null;
+        } else {
+          openLoginModal();
+        }
+      }
 
       if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
@@ -801,7 +850,8 @@
           closeLoginModal();
           document.getElementById('loginEmail').value = '';
           document.getElementById('loginPassword').value = '';
-          openHostPanel();
+          openHostPanel(pendingAdminTab || undefined);
+          pendingAdminTab = null;
         })
         .catch((error) => {
           alert('Authentication Failed: ' + error.message);
@@ -811,13 +861,58 @@
     function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
     function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
 
-    function openHostPanel() {
+    function openHostPanel(tab) {
       if (!currentAdminUser) {
         alert('Access Denied: You must be logged in as an administrator.');
         openLoginModal();
         return;
       }
       document.getElementById('hostModal').classList.remove('hidden');
+      showAdminTab(tab || activeAdminTab);
+    }
+
+    // Links like ?admin=proposals (used in Discord alerts) open that Host Panel tab
+    const ADMIN_TABS = ['proposals', 'comments', 'locations', 'stats', 'tools'];
+    let pendingAdminTab = ADMIN_TABS.includes(new URLSearchParams(location.search).get('admin'))
+      ? new URLSearchParams(location.search).get('admin') : null;
+    let activeAdminTab = 'proposals';
+
+    function showAdminTab(tab) {
+      activeAdminTab = tab;
+      document.querySelectorAll('[data-admin-tab]').forEach(btn => {
+        const active = btn.dataset.adminTab === tab;
+        btn.classList.toggle('bg-purple-600', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('text-gray-400', !active);
+        btn.classList.toggle('hover:bg-gray-800', !active);
+      });
+      document.querySelectorAll('[data-admin-pane]').forEach(pane => pane.classList.toggle('hidden', pane.dataset.adminPane !== tab));
+      if (tab === 'proposals') refreshProposalReviewMap();
+      if (tab === 'tools') renderBlockedWordsEditor();
+    }
+
+    function setBadge(id, count) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = count;
+      el.classList.toggle('hidden', !count);
+    }
+
+    // Proposals waiting + comments with any flags
+    function updateAdminBadges() {
+      const proposals = currentAdminUser ? Object.keys(latestProposals).length : 0;
+      let flagged = 0;
+      if (currentAdminUser) {
+        Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
+          Object.keys(comments || {}).forEach(commentId => {
+            const info = flagInfo((adminFlagsData[partyId] || {})[commentId]);
+            if (info.auto || info.people) flagged++;
+          });
+        });
+      }
+      setBadge('adminTabBadge-proposals', proposals);
+      setBadge('adminTabBadge-comments', flagged);
+      setBadge('adminNavBadge', proposals + flagged);
     }
 
     // Direct Firebase database listener for parties with Browser Notifications
@@ -851,6 +946,7 @@
     });
 
     // Listen for incoming party proposals (admins only; attached on sign-in)
+    let latestProposals = {};
     function onProposalsValue(snapshot) {
       renderAdminProposalsList(snapshot.val() || {});
     }
@@ -982,6 +1078,9 @@
     }
 
     function renderAdminProposalsList(proposalsData) {
+      latestProposals = proposalsData;
+      updateAdminBadges();
+      refreshProposalReviewMap();
       const container = document.getElementById('adminProposalsList');
       if (!container) return;
       container.innerHTML = '';
@@ -992,27 +1091,123 @@
         return;
       }
 
-      proposalList.forEach(([propId, prop]) => {
+      proposalList.forEach(([propId, prop], i) => {
         const item = document.createElement('div');
-        item.className = 'bg-gray-900/80 border border-amber-500/30 rounded-xl p-3 flex justify-between items-center gap-3';
+        item.className = 'bg-gray-900/80 border border-amber-500/30 rounded-xl p-3 flex flex-wrap justify-between items-center gap-3 cursor-pointer hover:border-amber-400/60';
         item.innerHTML = `
-          <div>
-            <span class="font-bold text-white text-xs block">${escapeHtml(prop.name)}</span>
-            <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.submittedAt)}</p>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-5 h-5 shrink-0 rounded-full bg-amber-500 text-gray-900 text-[10px] font-bold flex items-center justify-center">${i + 1}</span>
+            <div class="min-w-0">
+              <span class="font-bold text-white text-xs block">${escapeHtml(prop.name)}</span>
+              <p class="text-[10px] text-gray-400">${escapeHtml(prop.location)} • ${timeAgo(prop.createdAt || prop.submittedAt)}</p>
+            </div>
           </div>
           <div class="flex items-center gap-2">
+            <button class="js-review px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-semibold transition">Review & Edit</button>
             <button class="js-approve px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg font-semibold transition">Approve</button>
             <button class="js-reject px-2.5 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded-lg font-semibold transition">Reject</button>
           </div>
         `;
-        item.querySelector('.js-approve').addEventListener('click', () => approveProposal(propId));
-        item.querySelector('.js-reject').addEventListener('click', () => rejectProposal(propId));
+        item.addEventListener('click', () => focusProposalOnMap(propId));
+        item.querySelector('.js-review').addEventListener('click', (e) => { e.stopPropagation(); openProposalReview(propId); });
+        item.querySelector('.js-approve').addEventListener('click', (e) => { e.stopPropagation(); approveProposal(propId); });
+        item.querySelector('.js-reject').addEventListener('click', (e) => { e.stopPropagation(); rejectProposal(propId); });
         container.appendChild(item);
       });
+    }
 
-      if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
+    // Dark-styled Leaflet map matching the main map
+    function createDarkMap(elementId, lat, lng, zoom) {
+      const m = L.map(elementId, { attributionControl: false }).setView([lat, lng], zoom);
+      const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+      tiles.getContainer().style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
+      return m;
+    }
+
+    const numberedPin = (n) => L.divIcon({
+      className: '',
+      html: `<div style="width:22px;height:22px;border-radius:50%;background:#f59e0b;color:#111827;font:700 11px sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid #fff">${n}</div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+
+    let proposalMap = null;
+    let proposalMarkers = {};
+    function refreshProposalReviewMap() {
+      const el = document.getElementById('proposalReviewMap');
+      if (!el || el.offsetParent === null) return; // only while the Proposals tab is visible
+      if (!proposalMap) proposalMap = createDarkMap('proposalReviewMap', DEFAULT_LAT, DEFAULT_LNG, 13);
+      proposalMap.invalidateSize();
+      Object.values(proposalMarkers).forEach(m => proposalMap.removeLayer(m));
+      proposalMarkers = {};
+      const points = [];
+      Object.entries(latestProposals).forEach(([propId, prop], i) => {
+        const lat = Number(prop.lat), lng = Number(prop.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const marker = L.marker([lat, lng], { icon: numberedPin(i + 1) }).addTo(proposalMap);
+        const popup = document.createElement('div');
+        popup.style.cssText = 'color:#000;font-size:12px';
+        popup.textContent = `${i + 1}. ${prop.name}`;
+        marker.bindPopup(popup);
+        proposalMarkers[propId] = marker;
+        points.push([lat, lng]);
+      });
+      if (points.length) proposalMap.fitBounds(points, { padding: [30, 30], maxZoom: 16 });
+      else proposalMap.setView([DEFAULT_LAT, DEFAULT_LNG], 13);
+    }
+
+    function focusProposalOnMap(propId) {
+      const marker = proposalMarkers[propId];
+      if (!marker || !proposalMap) return;
+      proposalMap.setView(marker.getLatLng(), 17);
+      marker.openPopup();
+    }
+
+    function openProposalReview(propId) {
+      const prop = latestProposals[propId];
+      if (!prop) return;
+      document.getElementById('editPartyId').value = '';
+      document.getElementById('editProposalId').value = propId;
+      document.getElementById('editPartyName').value = prop.name || '';
+      document.getElementById('editPartyLocation').value = prop.location || '';
+      document.getElementById('editPartyStatus').value = 'ACTIVE PARTY';
+      document.getElementById('editPartyLat').value = prop.lat || DEFAULT_LAT;
+      document.getElementById('editPartyLng').value = prop.lng || DEFAULT_LNG;
+      document.getElementById('adminLocationModalHeader').textContent = 'Review Proposal';
+      document.getElementById('editSaveBtn').textContent = 'Approve with Changes';
+      document.getElementById('adminEditLocationModal').classList.remove('hidden');
+      showEditPartyMap();
+    }
+
+    // Pin map inside the add/edit/review modal, kept in sync with the lat/lng fields
+    let editMap = null;
+    let editMarker = null;
+    function showEditPartyMap() {
+      const latInput = document.getElementById('editPartyLat');
+      const lngInput = document.getElementById('editPartyLng');
+      const lat = parseFloat(latInput.value) || DEFAULT_LAT;
+      const lng = parseFloat(lngInput.value) || DEFAULT_LNG;
+      if (!editMap) {
+        editMap = createDarkMap('editPartyMap', lat, lng, 16);
+        editMarker = L.marker([lat, lng], { draggable: true }).addTo(editMap);
+        const setFields = (ll) => {
+          latInput.value = ll.lat.toFixed(6);
+          lngInput.value = ll.lng.toFixed(6);
+        };
+        editMarker.on('dragend', () => setFields(editMarker.getLatLng()));
+        editMap.on('click', (e) => { editMarker.setLatLng(e.latlng); setFields(e.latlng); });
+        const fromFields = () => {
+          const la = parseFloat(latInput.value), ln = parseFloat(lngInput.value);
+          if (Number.isFinite(la) && Number.isFinite(ln)) { editMarker.setLatLng([la, ln]); editMap.panTo([la, ln]); }
+        };
+        latInput.addEventListener('change', fromFields);
+        lngInput.addEventListener('change', fromFields);
       }
+      setTimeout(() => {
+        editMap.invalidateSize();
+        editMap.setView([lat, lng], 16);
+        editMarker.setLatLng([lat, lng]);
+      }, 50);
     }
 
     function filterParties() {
@@ -1119,7 +1314,10 @@
       document.getElementById('editPartyLat').value = DEFAULT_LAT;
       document.getElementById('editPartyLng').value = DEFAULT_LNG;
       document.getElementById('adminLocationModalHeader').textContent = 'Add New Location';
+      document.getElementById('editProposalId').value = '';
+      document.getElementById('editSaveBtn').textContent = 'Save Changes';
       document.getElementById('adminEditLocationModal').classList.remove('hidden');
+      showEditPartyMap();
     }
 
     function openAdminEditLocationModal(partyId) {
@@ -1133,7 +1331,10 @@
       document.getElementById('editPartyLat').value = party.lat || DEFAULT_LAT;
       document.getElementById('editPartyLng').value = party.lng || DEFAULT_LNG;
       document.getElementById('adminLocationModalHeader').textContent = 'Edit Location Info';
+      document.getElementById('editProposalId').value = '';
+      document.getElementById('editSaveBtn').textContent = 'Save Changes';
       document.getElementById('adminEditLocationModal').classList.remove('hidden');
+      showEditPartyMap();
     }
 
     function closeAdminEditLocationModal() {
@@ -1142,6 +1343,34 @@
 
     function handleAdminSaveLocation(e) {
       e.preventDefault();
+      const proposalId = document.getElementById('editProposalId').value;
+      if (proposalId) {
+        const name = document.getElementById('editPartyName').value.trim();
+        const status = document.getElementById('editPartyStatus').value;
+        db.ref().update({
+          [`parties/${proposalId}`]: {
+            id: proposalId,
+            name,
+            location: document.getElementById('editPartyLocation').value.trim() || 'Campus Area',
+            lat: parseFloat(document.getElementById('editPartyLat').value) || DEFAULT_LAT,
+            lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
+            status,
+            isPermanent: false,
+            crowdReportCount: 0,
+            crowdTotalSum: 0,
+            quietReportsCount: 0,
+            upvotes: 0,
+            downvotes: 0,
+            lastUpdatedAt: TIMESTAMP
+          },
+          [`proposals/${proposalId}`]: null
+        }).then(() => {
+          closeAdminEditLocationModal();
+          alert(`Approved "${name}"! It is now live on the app.`);
+        }, err => alert('Approve failed: ' + err.message));
+        return;
+      }
+
       const id = document.getElementById('editPartyId').value || `party_${Date.now()}`;
       const existing = partiesData[id] || {};
       const newStatus = document.getElementById('editPartyStatus').value;
@@ -1473,6 +1702,13 @@
     }
 
     const FLAGS_TO_HIDE = 3;
+    // "automod" is set by the server-side word filter; any other key is a visitor's flag
+    function flagInfo(flagsObj) {
+      const keys = Object.keys(flagsObj || {});
+      const auto = keys.includes('automod');
+      const people = keys.filter(k => k !== 'automod').length;
+      return { auto, people, hidden: auto || people >= FLAGS_TO_HIDE };
+    }
     let commentsRef = null;
     let flagsRef = null;
     let modalComments = {};
@@ -1501,8 +1737,8 @@
       const myUid = auth.currentUser && auth.currentUser.uid;
 
       const commentsList = Object.entries(modalComments)
-        .map(([commentId, comment]) => ({ commentId, comment, flags: Object.keys(modalFlags[commentId] || {}) }))
-        .filter(({ flags }) => currentAdminUser || flags.length < FLAGS_TO_HIDE)
+        .map(([commentId, comment]) => ({ commentId, comment, flags: Object.keys(modalFlags[commentId] || {}), info: flagInfo(modalFlags[commentId]) }))
+        .filter(({ info }) => currentAdminUser || !info.hidden)
         .sort((a, b) => toCount(b.comment.createdAt) - toCount(a.comment.createdAt));
 
       if (commentsList.length === 0) {
@@ -1510,14 +1746,14 @@
         return;
       }
 
-      commentsList.forEach(({ commentId, comment, flags }) => {
+      commentsList.forEach(({ commentId, comment, flags, info }) => {
         const iFlagged = myUid && flags.includes(myUid);
         const commentDiv = document.createElement('div');
-        commentDiv.className = `bg-gray-800/80 border ${flags.length >= FLAGS_TO_HIDE ? 'border-red-500/60' : 'border-gray-700/80'} rounded-xl p-3 mb-2`;
+        commentDiv.className = `bg-gray-800/80 border ${info.hidden ? 'border-red-500/60' : 'border-gray-700/80'} rounded-xl p-3 mb-2`;
         commentDiv.innerHTML = `
           <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
           <div class="flex justify-between items-center mt-1 gap-2">
-            <span class="text-[10px] text-gray-500">${timeAgo(comment.createdAt)}${currentAdminUser && flags.length ? ` • <span class="text-red-400">🚩 ${flags.length} flag${flags.length === 1 ? '' : 's'}${flags.length >= FLAGS_TO_HIDE ? ' (hidden from visitors)' : ''}</span>` : ''}</span>
+            <span class="text-[10px] text-gray-500">${timeAgo(comment.createdAt)}${currentAdminUser && (info.auto || info.people) ? ` • <span class="text-red-400">${info.auto ? '🤖 ' : ''}${info.people ? `🚩 ${info.people} flag${info.people === 1 ? '' : 's'}` : 'auto-flagged'}${info.hidden ? ' (hidden from visitors)' : ''}</span>` : ''}</span>
             <div class="flex items-center gap-3">
               ${iFlagged ? '<span class="text-[10px] text-gray-500">🚩 Flagged</span>' : '<button class="js-flag-comment text-[10px] text-gray-500 hover:text-red-400">🚩 Flag</button>'}
               ${currentAdminUser ? '<button class="js-delete-comment text-[10px] text-red-400 hover:underline">Delete</button>' : ''}
@@ -1571,29 +1807,31 @@
       const all = [];
       Object.entries(adminCommentsData).forEach(([partyId, comments]) => {
         Object.entries(comments || {}).forEach(([commentId, comment]) => {
-          const flagCount = Object.keys((adminFlagsData[partyId] || {})[commentId] || {}).length;
-          all.push({ partyId, commentId, comment, flagCount });
+          const info = flagInfo((adminFlagsData[partyId] || {})[commentId]);
+          all.push({ partyId, commentId, comment, info, priority: (info.auto ? 100 : 0) + info.people });
         });
       });
-      all.sort((a, b) => (b.flagCount - a.flagCount) || (toCount(b.comment.createdAt) - toCount(a.comment.createdAt)));
+      all.sort((a, b) => (b.priority - a.priority) || (toCount(b.comment.createdAt) - toCount(a.comment.createdAt)));
+      updateAdminBadges();
 
       if (all.length === 0) {
         container.innerHTML = '<p class="text-xs text-gray-500 italic">No comments yet.</p>';
         return;
       }
 
-      all.slice(0, 50).forEach(({ partyId, commentId, comment, flagCount }) => {
+      all.slice(0, 50).forEach(({ partyId, commentId, comment, info }) => {
+        const flagged = info.auto || info.people > 0;
         const item = document.createElement('div');
-        item.className = `bg-gray-900/80 border ${flagCount >= FLAGS_TO_HIDE ? 'border-red-500/60' : flagCount ? 'border-amber-500/40' : 'border-gray-700'} rounded-xl p-3 flex justify-between items-start gap-3`;
+        item.className = `bg-gray-900/80 border ${info.hidden ? 'border-red-500/60' : flagged ? 'border-amber-500/40' : 'border-gray-700'} rounded-xl p-3 flex justify-between items-start gap-3`;
         item.innerHTML = `
           <div class="min-w-0">
             <span class="text-[10px] text-purple-400 font-semibold">${escapeHtml(partiesData[partyId] ? partiesData[partyId].name : partyId)} • ${timeAgo(comment.createdAt)}</span>
-            ${flagCount ? `<span class="text-[10px] text-red-400 font-semibold"> • 🚩 ${flagCount} flag${flagCount === 1 ? '' : 's'}${flagCount >= FLAGS_TO_HIDE ? ' (hidden)' : ''}</span>` : ''}
+            ${flagged ? `<span class="text-[10px] text-red-400 font-semibold"> • ${info.auto ? '🤖 word filter' : ''}${info.auto && info.people ? ', ' : ''}${info.people ? `🚩 ${info.people} flag${info.people === 1 ? '' : 's'}` : ''}${info.hidden ? ' (hidden)' : ''}</span>` : ''}
             <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
           </div>
           <div class="flex flex-col gap-1 shrink-0">
             <button class="js-delete-comment px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
-            ${flagCount ? '<button class="js-keep-comment px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Keep</button>' : ''}
+            ${flagged ? '<button class="js-keep-comment px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Keep</button>' : ''}
           </div>
         `;
         item.querySelector('.js-delete-comment').addEventListener('click', () => deleteComment(partyId, commentId));
@@ -1649,6 +1887,25 @@
           ${topParties.length ? topParties.map(([pid, count]) => `<p class="text-xs"><span class="text-white">${escapeHtml(partiesData[pid] ? partiesData[pid].name : pid)}</span> <span class="text-gray-500">· ${count} report${count === 1 ? '' : 's'}</span></p>`).join('') : '<p class="text-gray-500 italic">No reports yet.</p>'}
         </div>
       `;
+    }
+
+    // ---- Blocked words editor (Tools tab) ----
+    function renderBlockedWordsEditor() {
+      const input = document.getElementById('blockedWordsInput');
+      const status = document.getElementById('blockedWordsStatus');
+      if (!input || document.activeElement === input) return;
+      input.value = blockedWords.join('\n');
+      status.textContent = blockedWordsFromDb
+        ? ''
+        : 'Showing the built-in default list. Click Save once to store it; the server-side filter only runs after that.';
+    }
+
+    function saveBlockedWords() {
+      const words = document.getElementById('blockedWordsInput').value
+        .split('\n').map(w => w.trim()).filter(Boolean);
+      const unique = [...new Set(words.map(w => w.toLowerCase()))];
+      db.ref('config/blockedWords').set(unique.join('\n'))
+        .then(() => alert(`Saved ${unique.length} blocked word${unique.length === 1 ? '' : 's'}.`), err => alert('Save failed: ' + err.message));
     }
 
     // ---- Admin cleanup tools ----
