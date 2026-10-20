@@ -44,6 +44,18 @@ jobs:
             rsync -a --exclude '.git' --exclude '.github' --exclude '.gitignore' preview-src/ _site/preview/
           fi
 
+      # Faster loading: build a small minified stylesheet with only the classes each page
+      # uses, instead of running the ~400 KB Tailwind CDN script in every visitor's browser
+      - name: Build Tailwind CSS
+        run: |
+          printf '@tailwind base;\n@tailwind components;\n@tailwind utilities;\n' > /tmp/tailwind-input.css
+          for dir in _site _site/preview; do
+            if [ -f "$dir/index.html" ] && grep -q 'cdn.tailwindcss.com/3.4.17' "$dir/index.html"; then
+              npx --yes tailwindcss@3.4.17 -i /tmp/tailwind-input.css -o "$dir/tailwind.css" --content "$dir/index.html" --minify
+              sed -i 's|<script src="https://cdn.tailwindcss.com/3.4.17"></script>|<link rel="stylesheet" href="tailwind.css">|' "$dir/index.html"
+            fi
+          done
+
       - name: Inject Secrets
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}

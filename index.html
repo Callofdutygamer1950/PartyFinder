@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Drop the Addy">
   
+  <!-- TAILWIND: replaced with a prebuilt, minified tailwind.css by the deploy workflow -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://unpkg.com/lucide@1.49.0/dist/umd/lucide.min.js" integrity="sha384-7mWwAGEOOlxvEBR+Mpy0eVhGL+9abGHkZtVoTs+dvrWkI5g00lyMaAxRIK+rqXGt" crossorigin="anonymous"></script>
 
@@ -26,7 +27,7 @@
   <!-- Map Selection Banner (Hidden by default) -->
   <div id="mapSelectBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-purple-900/90 text-white px-6 py-3 rounded-2xl shadow-2xl border border-purple-400 flex items-center gap-4 backdrop-blur-md">
     <div class="flex items-center gap-2 text-xs font-semibold">
-      <i data-lucide="map-pin" class="w-4 h-4 text-pink-400 animate-bounce"></i>
+      <i data-lucide="map-pin" class="w-4 h-4 text-pink-400 animate-bounce motion-reduce:animate-none"></i>
       Click anywhere within 3 miles of campus to select the party location
     </div>
     <button onclick="cancelMapSelection()" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs">Cancel</button>
@@ -37,7 +38,7 @@
     <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
         <div class="bg-purple-600/20 p-2 rounded-xl border border-purple-500/30 text-purple-400">
-          <i data-lucide="radio" class="w-6 h-6 animate-pulse"></i>
+          <i data-lucide="radio" class="w-6 h-6 animate-pulse motion-reduce:animate-none"></i>
         </div>
         <div>
           <h1 class="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
@@ -73,7 +74,7 @@
       <div class="w-full sm:w-80 space-y-2">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-          <input type="text" id="searchInput" oninput="filterParties()" placeholder="Search party or location..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition">
+          <input type="text" id="searchInput" oninput="filterParties()" aria-label="Search parties or locations" placeholder="Search party or location..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition">
         </div>
         <div class="relative inline-block" id="sortMenuWrap">
           <button onclick="toggleSortMenu()" id="sortMenuBtn" aria-haspopup="menu" aria-expanded="false" class="px-3 py-2 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:bg-gray-800 transition flex items-center gap-1.5">
@@ -190,6 +191,12 @@
           <span>Support iOS App</span>
         </button>
 
+        <!-- About & Rules -->
+        <button onclick="openAboutModal()" class="px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-500 rounded-xl flex items-center gap-1.5 transition">
+          <i data-lucide="info" class="w-3.5 h-3.5"></i>
+          <span>About &amp; Rules</span>
+        </button>
+
         <!-- Install App Button (shown when the browser supports installing) -->
         <button onclick="handleInstallClick()" id="installAppBtn" class="hidden px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-sky-400 border border-sky-500/30 hover:border-sky-500/60 rounded-xl flex items-center gap-1.5 transition">
           <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
@@ -249,18 +256,78 @@
       <div class="flex-grow overflow-y-auto space-y-4 pr-1">
         <div>
           <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Live Comments</h3>
+          <div id="modalTagSummary" class="hidden flex flex-wrap gap-1.5 mb-3" aria-label="Tags from recent comments"></div>
           <div id="modalCommentContainer" class="min-h-[80px] space-y-2">
             <p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>
           </div>
         </div>
 
         <form onsubmit="handleModalCommentSubmit(event)" class="space-y-2 pt-2 border-t border-gray-800">
-          <label class="block text-xs font-semibold text-gray-400">Post Comment <span class="font-normal text-gray-500">· comments disappear after 12 hours</span></label>
+          <label for="modalCommentInput" class="block text-xs font-semibold text-gray-400">Post Comment <span class="font-normal text-gray-500">· comments disappear after 12 hours</span></label>
           <div class="flex gap-2">
-            <input type="text" id="modalCommentInput" maxlength="180" placeholder="Type a comment..." required class="flex-grow bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+            <input type="text" id="modalCommentInput" maxlength="180" placeholder="Type a comment..." class="flex-grow bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
             <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition">Post</button>
           </div>
+          <button type="button" id="commentTagToggle" onclick="toggleCommentTagMenu()" aria-expanded="false" aria-controls="commentTagMenu" class="text-[11px] text-purple-400 hover:text-purple-300 font-medium">＋ Add tags (optional)</button>
+          <div id="commentTagMenu" class="hidden flex flex-wrap gap-1.5" role="group" aria-label="Comment tags"></div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- About & Rules Modal -->
+  <div id="aboutModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="info" class="w-5 h-5 text-purple-400"></i> About &amp; Rules</h2>
+        <button onclick="closeAboutModal()" class="text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
+      </div>
+      <div class="space-y-5 text-xs text-gray-300 leading-relaxed">
+        <section>
+          <h3 class="text-sm font-bold text-white mb-1">What is Drop the Addy?</h3>
+          <p>An anonymous, live map of what's happening around Slippery Rock. Anyone can report whether a spot is 🎉 Party Time or 💀 Dead, vote on locations, and leave short comments. No account needed.</p>
+        </section>
+
+        <section>
+          <h3 class="text-sm font-bold text-white mb-1">How statuses work</h3>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong class="text-white">🎉 Party Time:</strong> one report is enough to mark a spot as live.</li>
+            <li><strong class="text-white">💀 Dead takes 3 reports</strong> from 3 different people, so one person can't shut a party down on their own.</li>
+            <li><strong class="text-white">6-hour expiry:</strong> if nobody updates a Party Time spot for 6 hours, it automatically shows as Dead. After 2 hours without an update it fades and says it may be outdated.</li>
+            <li>You can update each spot <strong class="text-white">once every 15 minutes</strong>.</li>
+            <li>👍/👎 votes are one per person per spot, and <strong class="text-white">all votes reset every day at 8am</strong>.</li>
+            <li>🔥 "reports in the last hour" counts how many different people updated a spot recently.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-sm font-bold text-white mb-1">Community rules</h3>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>No slurs, threats, harassment, or personal information about anyone.</li>
+            <li>Don't post fake reports or propose places that aren't real.</li>
+            <li>Comments that match the blocked-words list, or that 3 people flag 🚩, are hidden until an admin reviews them. Admins may delete anything that breaks these rules.</li>
+            <li>Stay safe: see the Get Home Safe numbers on the main page.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 class="text-sm font-bold text-white mb-1">What we store</h3>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong class="text-white">An anonymous ID</strong> for your browser (no name, email, or phone number). It's what lets us limit votes and reports per person.</li>
+            <li><strong class="text-white">Your reports and votes</strong>, linked to that anonymous ID. Votes are cleared every morning at 8am.</li>
+            <li><strong class="text-white">Comments</strong> and any tags you add. Comments are <strong class="text-white">deleted after 12 hours</strong>.</li>
+            <li><strong class="text-white">Proposals, bug reports and feature requests</strong> you submit.</li>
+            <li>If you subscribe to a party, a <strong class="text-white">notification token</strong> so we can send you alerts. Unsubscribe any time.</li>
+            <li><strong class="text-white">Your location is never stored or sent anywhere.</strong> "Near me" only uses it inside your own browser to sort by distance.</li>
+            <li>Your browser also remembers your own votes and subscriptions locally. Clearing your site data removes them.</li>
+          </ul>
+          <p class="mt-2 text-gray-500">The database is backed up nightly and backups are kept for 30 days.</p>
+        </section>
+
+        <section>
+          <h3 class="text-sm font-bold text-white mb-1">Questions or problems?</h3>
+          <p>Use the <strong class="text-white">Request Feature / Report Bug</strong> button at the bottom of the page.</p>
+        </section>
       </div>
     </div>
   </div>
@@ -1005,7 +1072,7 @@
         card.className = `bg-gray-900/90 border ${isParty ? 'border-pink-500/40 shadow-pink-900/10' : 'border-gray-800'} ${isStale ? 'opacity-60' : ''} rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/60 hover:opacity-100 cursor-pointer transition`;
         
         card.innerHTML = `
-          <div class="js-open-details">
+          <div class="js-open-details" role="button" tabindex="0" aria-label="Open details for ${escapeHtml(party.name)}">
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
@@ -1029,17 +1096,22 @@
           <!-- Upvote / Downvote Inline Bar -->
           <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-2 text-xs">
             <div class="flex items-center gap-2">
-              <button class="js-vote-up ${myVote === 'up' ? 'ring-2 ring-emerald-400' : ''} px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+              <button aria-label="Upvote ${escapeHtml(party.name)} (${upvotes})" aria-pressed="${myVote === 'up'}" class="js-vote-up ${myVote === 'up' ? 'ring-2 ring-emerald-400' : ''} px-2.5 py-1 bg-gray-800 hover:bg-emerald-900/40 text-emerald-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                 👍 <span>${upvotes}</span>
               </button>
-              <button class="js-vote-down ${myVote === 'down' ? 'ring-2 ring-red-400' : ''} px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+              <button aria-label="Downvote ${escapeHtml(party.name)} (${downvotes})" aria-pressed="${myVote === 'down'}" class="js-vote-down ${myVote === 'down' ? 'ring-2 ring-red-400' : ''} px-2.5 py-1 bg-gray-800 hover:bg-red-900/40 text-red-400 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
                 👎 <span>${downvotes}</span>
               </button>
             </div>
-            <span class="js-open-details text-purple-400 font-semibold text-xs hover:underline">Details & Comments →</span>
+            <button class="js-open-details text-purple-400 font-semibold text-xs hover:underline">Details & Comments →</button>
           </div>
         `;
-        card.querySelectorAll('.js-open-details').forEach(el => el.addEventListener('click', () => openPartyDetailsModal(partyId)));
+        card.querySelectorAll('.js-open-details').forEach(el => {
+          el.addEventListener('click', () => openPartyDetailsModal(partyId));
+          el.addEventListener('keydown', (e) => {
+            if (e.target === el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openPartyDetailsModal(partyId); }
+          });
+        });
         card.querySelector('.js-vote-up').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'up'); });
         card.querySelector('.js-vote-down').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'down'); });
         grid.appendChild(card);
@@ -1684,13 +1756,64 @@
     }
 
     // Multi-Comment Feed Logic with Slur Filter
+    // Optional tags people can add to a comment (keys must match the database rules)
+    const COMMENT_TAGS = [
+      { key: 'music', label: '🎵 Good music' },
+      { key: 'byob', label: '🍺 BYOB' },
+      { key: 'cover', label: '💸 Cover charge' },
+      { key: 'line', label: '🚶 Line outside' },
+      { key: 'packed', label: '🏠 Packed' },
+      { key: 'chill', label: '😌 Chill vibe' }
+    ];
+    const tagLabel = key => (COMMENT_TAGS.find(t => t.key === key) || { label: key }).label;
+    let selectedCommentTags = new Set();
+
+    function renderCommentTagMenu() {
+      const menu = document.getElementById('commentTagMenu');
+      menu.innerHTML = '';
+      COMMENT_TAGS.forEach(tag => {
+        const on = selectedCommentTags.has(tag.key);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('aria-pressed', String(on));
+        btn.className = `px-2.5 py-1 rounded-full text-[11px] font-medium border transition ${on ? 'bg-purple-600 border-purple-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}`;
+        btn.textContent = tag.label;
+        btn.addEventListener('click', () => {
+          if (selectedCommentTags.has(tag.key)) selectedCommentTags.delete(tag.key);
+          else selectedCommentTags.add(tag.key);
+          renderCommentTagMenu();
+          menu.querySelectorAll('button')[COMMENT_TAGS.indexOf(tag)].focus();
+        });
+        menu.appendChild(btn);
+      });
+    }
+
+    function toggleCommentTagMenu(open) {
+      const menu = document.getElementById('commentTagMenu');
+      const toggle = document.getElementById('commentTagToggle');
+      const show = open === undefined ? menu.classList.contains('hidden') : open;
+      menu.classList.toggle('hidden', !show);
+      toggle.setAttribute('aria-expanded', String(show));
+      toggle.textContent = show ? '− Hide tags' : '＋ Add tags (optional)';
+      if (show) renderCommentTagMenu();
+    }
+
+    function resetCommentTags() {
+      selectedCommentTags = new Set();
+      toggleCommentTagMenu(false);
+    }
+
     function handleModalCommentSubmit(e) {
       e.preventDefault();
       if (!selectedPartyId) return;
 
       const input = document.getElementById('modalCommentInput');
       const commentText = input.value.trim();
-      if (!commentText) return;
+      const tags = [...selectedCommentTags];
+      if (!commentText && tags.length === 0) {
+        alert('Type a comment or pick at least one tag.');
+        return;
+      }
 
       if (containsProfanity(commentText)) {
         alert('Your comment contains prohibited language and cannot be posted.');
@@ -1701,11 +1824,15 @@
       whenSignedIn().then(() => {
         const commentId = db.ref(`comments/${partyId}`).push().key;
         return db.ref().update({
-          [`comments/${partyId}/${commentId}`]: { text: commentText, createdAt: TIMESTAMP },
+          [`comments/${partyId}/${commentId}`]: Object.assign(
+            { text: commentText, createdAt: TIMESTAMP },
+            tags.length ? { tags: Object.fromEntries(tags.map(t => [t, true])) } : {}
+          ),
           [`commentLocks/${auth.currentUser.uid}`]: TIMESTAMP
         });
       }).then(() => {
         input.value = '';
+        resetCommentTags();
       }).catch((error) => {
         alert(error.code === 'PERMISSION_DENIED'
           ? 'Please wait 20 seconds between comments.'
@@ -1756,6 +1883,8 @@
         .filter(({ comment, info }) => !isExpiredComment(comment) && (currentAdminUser || !info.hidden))
         .sort((a, b) => toCount(b.comment.createdAt) - toCount(a.comment.createdAt));
 
+      renderTagSummary(commentsList.filter(({ info }) => !info.hidden).map(({ comment }) => comment));
+
       if (commentsList.length === 0) {
         commentsContainer.innerHTML = '<p class="text-gray-500 italic text-center py-4">No active comments posted yet.</p>';
         return;
@@ -1766,12 +1895,13 @@
         const commentDiv = document.createElement('div');
         commentDiv.className = `bg-gray-800/80 border ${info.hidden ? 'border-red-500/60' : 'border-gray-700/80'} rounded-xl p-3 mb-2`;
         commentDiv.innerHTML = `
-          <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
+          ${comment.text ? `<p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>` : ''}
+          ${commentTagChips(comment)}
           <div class="flex justify-between items-center mt-1 gap-2">
             <span class="text-[10px] text-gray-500">${timeAgo(comment.createdAt)}${currentAdminUser && (info.auto || info.people) ? ` • <span class="text-red-400">${info.auto ? '🤖 ' : ''}${info.people ? `🚩 ${info.people} flag${info.people === 1 ? '' : 's'}` : 'auto-flagged'}${info.hidden ? ' (hidden from visitors)' : ''}</span>` : ''}</span>
             <div class="flex items-center gap-3">
-              ${iFlagged ? '<span class="text-[10px] text-gray-500">🚩 Flagged</span>' : '<button class="js-flag-comment text-[10px] text-gray-500 hover:text-red-400">🚩 Flag</button>'}
-              ${currentAdminUser ? '<button class="js-delete-comment text-[10px] text-red-400 hover:underline">Delete</button>' : ''}
+              ${iFlagged ? '<span class="text-[10px] text-gray-500">🚩 Flagged</span>' : '<button class="js-flag-comment text-[10px] text-gray-500 hover:text-red-400" aria-label="Flag this comment as inappropriate">🚩 Flag</button>'}
+              ${currentAdminUser ? '<button class="js-delete-comment text-[10px] text-red-400 hover:underline" aria-label="Delete this comment">Delete</button>' : ''}
             </div>
           </div>
         `;
@@ -1781,6 +1911,24 @@
         if (deleteBtn) deleteBtn.addEventListener('click', () => deleteComment(partyId, commentId));
         commentsContainer.appendChild(commentDiv);
       });
+    }
+
+    function commentTagChips(comment) {
+      const keys = Object.keys((comment && comment.tags) || {}).filter(k => COMMENT_TAGS.some(t => t.key === k));
+      if (!keys.length) return '';
+      return `<div class="flex flex-wrap gap-1 mt-1">${keys.map(k => `<span class="px-2 py-0.5 rounded-full bg-gray-900 border border-gray-700 text-[10px] text-gray-300">${escapeHtml(tagLabel(k))}</span>`).join('')}</div>`;
+    }
+
+    // Tally of tags across the party's current comments, shown above the comment list
+    function renderTagSummary(comments) {
+      const box = document.getElementById('modalTagSummary');
+      const counts = {};
+      comments.forEach(c => Object.keys((c && c.tags) || {}).forEach(k => {
+        if (COMMENT_TAGS.some(t => t.key === k)) counts[k] = (counts[k] || 0) + 1;
+      }));
+      const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+      box.classList.toggle('hidden', keys.length === 0);
+      box.innerHTML = keys.map(k => `<span class="px-2.5 py-1 rounded-full bg-purple-900/40 border border-purple-500/30 text-[11px] text-purple-200 font-medium">${escapeHtml(tagLabel(k))} <span class="text-purple-400">×${counts[k]}</span></span>`).join('');
     }
 
     function flagComment(partyId, commentId) {
@@ -1843,7 +1991,8 @@
           <div class="min-w-0">
             <span class="text-[10px] text-purple-400 font-semibold">${escapeHtml(partiesData[partyId] ? partiesData[partyId].name : partyId)} • ${timeAgo(comment.createdAt)}</span>
             ${flagged ? `<span class="text-[10px] text-red-400 font-semibold"> • ${info.auto ? '🤖 word filter' : ''}${info.auto && info.people ? ', ' : ''}${info.people ? `🚩 ${info.people} flag${info.people === 1 ? '' : 's'}` : ''}${info.hidden ? ' (hidden)' : ''}</span>` : ''}
-            <p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>
+            ${comment.text ? `<p class="text-xs text-gray-200 break-words">${escapeHtml(comment.text)}</p>` : ''}
+            ${commentTagChips(comment)}
           </div>
           <div class="flex flex-col gap-1 shrink-0">
             <button class="js-delete-comment px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
@@ -1989,6 +2138,7 @@
       updateSubscriptionButtonUI();
 
       loadPartyComments(partyId);
+      resetCommentTags();
 
       document.getElementById('partyDetailsModal').classList.remove('hidden');
     }
@@ -2281,7 +2431,87 @@
       if (selected && partiesData[selected]) select.value = selected;
     }
 
+    function openAboutModal() { document.getElementById('aboutModal').classList.remove('hidden'); }
+    function closeAboutModal() { document.getElementById('aboutModal').classList.add('hidden'); }
+
+    // ---- Accessibility: every popup acts as a proper dialog ----
+    // Esc or clicking the dark backdrop closes it, Tab stays inside it, and focus returns where it was.
+    const MODAL_CLOSERS = {
+      partyDetailsModal: () => closePartyDetailsModal(),
+      aboutModal: () => closeAboutModal(),
+      feedbackModal: () => closeFeedbackModal(),
+      donateModal: () => closeDonateModal(),
+      proposeModal: () => closeProposeModal(),
+      loginModal: () => closeLoginModal(),
+      hostModal: () => closeHostModal(),
+      adminEditLocationModal: () => closeAdminEditLocationModal()
+    };
+    const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const openModalStack = [];
+
+    function topOpenModal() {
+      return openModalStack.length ? document.getElementById(openModalStack[openModalStack.length - 1].id) : null;
+    }
+
+    function setupAccessibleModals() {
+      Object.keys(MODAL_CLOSERS).forEach(id => {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        const heading = modal.querySelector('h2');
+        if (heading) {
+          if (!heading.id) heading.id = `${id}-title`;
+          modal.setAttribute('aria-labelledby', heading.id);
+        }
+        modal.addEventListener('mousedown', (e) => { if (e.target === modal) MODAL_CLOSERS[id](); });
+
+        // Watch for the popup opening/closing (they toggle the "hidden" class)
+        new MutationObserver(() => {
+          const isOpen = !modal.classList.contains('hidden');
+          const index = openModalStack.findIndex(entry => entry.id === id);
+          if (isOpen && index === -1) {
+            openModalStack.push({ id, returnFocus: document.activeElement });
+            setTimeout(() => {
+              const first = [...modal.querySelectorAll(FOCUSABLE)].find(el => el.offsetParent !== null && el.type !== 'radio');
+              (first || modal).focus();
+            }, 50);
+          } else if (!isOpen && index !== -1) {
+            const [entry] = openModalStack.splice(index, 1);
+            if (entry.returnFocus && document.contains(entry.returnFocus)) entry.returnFocus.focus();
+          }
+        }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+      });
+
+      // Icon-only close buttons get a readable name
+      document.querySelectorAll('button').forEach(btn => {
+        if (btn.textContent.trim() === '✕' && !btn.getAttribute('aria-label')) btn.setAttribute('aria-label', 'Close');
+      });
+      // Connect each form label to the field right after it
+      document.querySelectorAll('label:not([for])').forEach(label => {
+        if (label.querySelector('input, select, textarea')) return;
+        const field = label.nextElementSibling;
+        if (field && field.id && /^(INPUT|SELECT|TEXTAREA)$/.test(field.tagName)) label.htmlFor = field.id;
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const modal = topOpenModal();
+      if (!modal) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        MODAL_CLOSERS[modal.id]();
+      } else if (e.key === 'Tab') {
+        const items = [...modal.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (e.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
+      setupAccessibleModals();
       setFeedbackType('FEATURE');
       renderUI();
       setInterval(renderUI, 60 * 1000);
