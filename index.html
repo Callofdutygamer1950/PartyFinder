@@ -333,6 +333,14 @@
             <li><strong class="text-white">Your location is never stored or sent anywhere.</strong> "Near me" only uses it inside your own browser to sort by distance.</li>
           </ul>
           <p class="mt-2 text-gray-500">The database is backed up nightly and backups are kept for 30 days. Full details are in the <a href="privacy.html" class="text-purple-400 hover:underline">Privacy Policy</a>.</p>
+          <div class="mt-3 bg-gray-800/60 border border-gray-700 rounded-xl p-3">
+            <p class="text-gray-400 mb-1">Your anonymous ID on this device:</p>
+            <div class="flex items-center gap-2">
+              <code id="aboutAnonId" class="flex-1 min-w-0 truncate text-[11px] text-purple-200 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1">Loading…</code>
+              <button type="button" onclick="copyAnonId()" id="aboutCopyIdBtn" class="shrink-0 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-[11px] rounded-lg font-medium">Copy</button>
+            </div>
+            <button type="button" onclick="requestDataDeletion()" class="mt-2 text-red-400 hover:underline">Delete my data</button>
+          </div>
         </section>
 
         <section>
@@ -492,7 +500,7 @@
           <button data-admin-tab="comments" onclick="showAdminTab('comments')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Comments<span id="adminTabBadge-comments" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span></button>
           <button data-admin-tab="locations" onclick="showAdminTab('locations')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Locations</button>
           <button data-admin-tab="stats" onclick="showAdminTab('stats')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Stats</button>
-          <button data-admin-tab="tools" onclick="showAdminTab('tools')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Tools</button>
+          <button data-admin-tab="tools" onclick="showAdminTab('tools')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">Tools<span id="adminTabBadge-tools" class="hidden px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span></button>
       </div>
       <div class="flex-grow overflow-y-auto pr-1">
         <!-- Proposals -->
@@ -531,6 +539,21 @@
 
         <!-- Tools -->
         <div data-admin-pane="tools" class="hidden space-y-4">
+          <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
+            <h3 class="text-xs font-bold text-orange-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <i data-lucide="user-x" class="w-4 h-4"></i> Delete a Visitor's Data
+            </h3>
+            <p class="text-[10px] text-gray-500 mb-2">Paste an anonymous ID from a deletion request. Removes their votes, report history, cooldowns, flags and alert subscription. Comments, proposals and bug reports aren't linked to IDs.</p>
+            <div class="flex gap-2">
+              <input type="text" id="deleteVisitorIdInput" placeholder="Anonymous ID" aria-label="Anonymous ID to delete" class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white font-mono">
+              <button onclick="deleteVisitorData(document.getElementById('deleteVisitorIdInput').value)" class="shrink-0 px-3 py-1.5 bg-orange-700 hover:bg-orange-600 text-white text-xs rounded-lg font-semibold">Delete data</button>
+            </div>
+            <p class="text-[10px] font-semibold text-gray-400 mt-3 mb-1">Pending requests</p>
+            <div id="adminDeletionRequests" class="space-y-1.5">
+              <p class="text-[10px] text-gray-500 italic">No deletion requests.</p>
+            </div>
+          </div>
+
           <div class="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
             <h3 class="text-xs font-bold text-red-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <i data-lucide="shield-alert" class="w-4 h-4"></i> Blocked Words
@@ -928,6 +951,7 @@
       db.ref('proposals').off('value', onProposalsValue);
       db.ref('comments').off('value', onAdminCommentsValue);
       db.ref('commentFlags').off('value', onAdminFlagsValue);
+      db.ref('deletionRequests').off('value', onDeletionRequestsValue);
       if (adminReportLogRef) { adminReportLogRef.off(); adminReportLogRef = null; }
       if (currentAdminUser) {
         const showAdminLoadError = (containerId, what) => (err) => {
@@ -939,6 +963,7 @@
         db.ref('proposals').on('value', onProposalsValue, showAdminLoadError('adminProposalsList', 'proposals'));
         db.ref('comments').on('value', onAdminCommentsValue, showAdminLoadError('adminCommentsList', 'comments'));
         db.ref('commentFlags').on('value', onAdminFlagsValue, () => {});
+        db.ref('deletionRequests').on('value', onDeletionRequestsValue, () => {});
         adminReportLogRef = db.ref('reportLog').orderByChild('at').startAt(serverNow() - 30 * DAY_MS);
         adminReportLogRef.on('value', onAdminReportLogValue, showAdminLoadError('adminStats', 'stats'));
         if (navText) navText.textContent = 'Admin Panel';
@@ -949,6 +974,7 @@
         renderAdminProposalsList({});
         adminCommentsData = {};
         adminFlagsData = {};
+        deletionRequests = {};
         closeHostModal();
       }
       if (selectedPartyId) loadPartyComments(selectedPartyId);
@@ -1044,9 +1070,11 @@
           });
         });
       }
+      const deletions = currentAdminUser ? Object.keys(deletionRequests).length : 0;
       setBadge('adminTabBadge-proposals', proposals);
       setBadge('adminTabBadge-comments', flagged);
-      setBadge('adminNavBadge', proposals + flagged);
+      setBadge('adminTabBadge-tools', deletions);
+      setBadge('adminNavBadge', proposals + flagged + deletions);
     }
 
     // Live party data; also alerts this tab when a subscribed party changes status
@@ -2570,7 +2598,129 @@
       if (selected && partiesData[selected] && !isExpiredParty(partiesData[selected])) select.value = selected;
     }
 
-    function openAboutModal() { document.getElementById('aboutModal').classList.remove('hidden'); }
+    function openAboutModal() {
+      showAnonId();
+      document.getElementById('aboutModal').classList.remove('hidden');
+    }
+
+    // ---- Your data: anonymous ID, copy, and deletion requests ----
+    function showAnonId() {
+      const el = document.getElementById('aboutAnonId');
+      const user = auth.currentUser;
+      el.textContent = user ? user.uid : 'Not connected yet';
+    }
+
+    function copyAnonId() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const btn = document.getElementById('aboutCopyIdBtn');
+      const done = () => { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); };
+      if (navigator.clipboard) navigator.clipboard.writeText(user.uid).then(done, () => prompt('Copy your anonymous ID:', user.uid));
+      else prompt('Copy your anonymous ID:', user.uid);
+    }
+
+    function requestDataDeletion() {
+      if (currentAdminUser) {
+        alert("You're logged in as an admin. Log out first; data deletion is for visitor IDs.");
+        return;
+      }
+      whenSignedIn().then((user) => {
+        const uid = user.uid;
+        if (!confirm(`Delete my data?\n\nThis sends a request to delete the data linked to your anonymous ID:\n${uid}\n\nIt also resets this device: your saved votes and alert subscriptions are cleared and you get a new anonymous ID.`)) return;
+
+        return db.ref().update({
+          [`deletionRequests/${db.ref('deletionRequests').push().key}`]: { uid, createdAt: TIMESTAMP },
+          [`submitLocks/${uid}`]: TIMESTAMP,
+          [`pushSubscriptions/${uid}`]: null
+        }).then(() => {
+          // Start this device fresh so nothing new gets linked to the ID being deleted
+          Object.keys(localStorage).filter(k => k.startsWith('vote_')).forEach(k => localStorage.removeItem(k));
+          localStorage.removeItem('subscribedPartyIds');
+          subscribedPartyIds = [];
+          pushTokenPromise = null;
+          return auth.signOut();
+        }).then(() => {
+          renderUI();
+          alert(
+            "Your request has been sent.\n\n" +
+            "Drop the Addy keeps very little that could identify you: just an anonymous ID (no name, email or phone number) " +
+            "linked to your recent votes, reports and alert subscriptions, and most of that deletes itself within 30 days anyway. " +
+            "We'll do our best to remove what's left for this ID as soon as we can. Backup copies expire within 30 days.\n\n" +
+            "Comments, party proposals and bug reports aren't linked to your ID. If you want one of those removed, describe it using Report Bug.\n\n" +
+            "This device has been reset: your saved votes and subscriptions were cleared and you now have a new anonymous ID."
+          );
+          setTimeout(showAnonId, 1500);
+        });
+      }).catch((err) => {
+        alert(err && err.code === 'PERMISSION_DENIED' ? SUBMIT_COOLDOWN_MESSAGE : 'Could not send the request: ' + (err && err.message));
+      });
+    }
+
+    // Admin: pending deletion requests and deleting everything tied to an anonymous ID
+    let deletionRequests = {};
+    function onDeletionRequestsValue(snapshot) {
+      deletionRequests = snapshot.val() || {};
+      updateAdminBadges();
+      const box = document.getElementById('adminDeletionRequests');
+      if (!box) return;
+      box.innerHTML = '';
+      const list = Object.entries(deletionRequests).sort(([, a], [, b]) => toCount(a.createdAt) - toCount(b.createdAt));
+      if (list.length === 0) {
+        box.innerHTML = '<p class="text-[10px] text-gray-500 italic">No deletion requests.</p>';
+        return;
+      }
+      list.forEach(([requestId, req]) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-gray-900/80 border border-gray-700 rounded-lg p-2';
+        row.innerHTML = `
+          <code class="flex-1 min-w-0 truncate text-[10px] text-purple-200">${escapeHtml(req.uid)}</code>
+          <span class="shrink-0 text-[10px] text-gray-500">${timeAgo(req.createdAt)}</span>
+          <button class="js-delete-now shrink-0 px-2 py-1 bg-orange-700 hover:bg-orange-600 text-white text-[10px] rounded-md font-semibold">Delete data</button>
+          <button class="js-dismiss shrink-0 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-[10px] rounded-md">Dismiss</button>
+        `;
+        row.querySelector('.js-delete-now').addEventListener('click', () => deleteVisitorData(req.uid));
+        row.querySelector('.js-dismiss').addEventListener('click', () => {
+          if (confirm('Dismiss this request without deleting anything?')) db.ref(`deletionRequests/${requestId}`).remove();
+        });
+        box.appendChild(row);
+      });
+    }
+
+    function deleteVisitorData(rawId) {
+      const uid = String(rawId || '').trim();
+      if (!/^[A-Za-z0-9]{20,40}$/.test(uid)) {
+        alert("That doesn't look like an anonymous ID. Paste the full ID from the request.");
+        return;
+      }
+      if (!confirm(`Delete all data linked to:\n${uid}\n\nThis removes their votes, report history, cooldowns, flags and alert subscription. It can't be undone.`)) return;
+
+      const updates = {
+        [`commentLocks/${uid}`]: null,
+        [`submitLocks/${uid}`]: null,
+        [`pushSubscriptions/${uid}`]: null
+      };
+      Object.keys(partiesData).forEach(partyId => {
+        updates[`votes/${partyId}/${uid}`] = null;
+        updates[`reportLocks/${partyId}/${uid}`] = null;
+        updates[`quietVoters/${partyId}/${uid}`] = null;
+      });
+      Object.entries(adminFlagsData).forEach(([partyId, comments]) => {
+        Object.entries(comments || {}).forEach(([commentId, flaggers]) => {
+          if (flaggers && flaggers[uid]) updates[`commentFlags/${partyId}/${commentId}/${uid}`] = null;
+        });
+      });
+      Object.entries(deletionRequests).forEach(([requestId, req]) => {
+        if (req && req.uid === uid) updates[`deletionRequests/${requestId}`] = null;
+      });
+
+      db.ref('reportLog').orderByChild('uid').equalTo(uid).once('value').then((snap) => {
+        snap.forEach(child => { updates[`reportLog/${child.key}`] = null; });
+        return db.ref().update(updates);
+      }).then(() => {
+        document.getElementById('deleteVisitorIdInput').value = '';
+        alert('Done. All data linked to that ID was deleted.\n\nOptional: in the Firebase console, open Authentication → Users, search for this ID and delete the empty anonymous account too.');
+      }).catch(err => alert('Delete failed: ' + err.message));
+    }
     function closeAboutModal() { document.getElementById('aboutModal').classList.add('hidden'); }
 
     // ---- Accessibility: every popup acts as a proper dialog ----
