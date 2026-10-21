@@ -241,6 +241,7 @@
         <div class="min-w-0 flex-1">
           <h2 id="modalPartyTitle" class="text-lg font-bold text-white break-words">Party Name</h2>
           <p id="modalPartyLocation" class="text-xs text-gray-400 break-words">Location</p>
+          <p id="modalPartyDetails" class="hidden text-xs text-gray-200 mt-1.5 whitespace-pre-line break-words"></p>
         </div>
         <div class="order-last sm:order-none w-full sm:w-auto flex items-center gap-2">
           <button onclick="shareParty(selectedPartyId)" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 text-xs font-semibold flex items-center gap-1.5 transition">
@@ -256,8 +257,15 @@
         <button onclick="closePartyDetailsModal()" class="shrink-0 text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
       </div>
 
+      <!-- Shown instead of votes and comments until the party is confirmed -->
+      <div id="modalConfirmPanel" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-2">
+        <p class="text-sm font-bold text-amber-300">⏳ Not confirmed yet</p>
+        <p id="modalConfirmText" class="text-xs text-gray-300 mt-1"></p>
+        <button id="modalConfirmBtn" onclick="confirmParty(selectedPartyId)" class="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-gray-900 rounded-lg text-xs font-bold transition">✅ I can confirm it's happening</button>
+      </div>
+
       <!-- Live Voting Bar Inside Modal -->
-      <div class="flex items-center justify-between bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 mb-4">
+      <div id="modalVotingBar" class="flex items-center justify-between bg-gray-800/60 border border-gray-700/80 rounded-xl p-3 mb-4">
         <span class="text-xs font-medium text-gray-300">Rate this Location:</span>
         <div class="flex items-center gap-3">
           <button id="modalUpvoteBtn" onclick="castPartyVote(selectedPartyId, 'up')" class="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
@@ -269,7 +277,7 @@
         </div>
       </div>
 
-      <div class="flex-grow overflow-y-auto space-y-4 pr-1">
+      <div id="modalCommentsSection" class="flex-grow overflow-y-auto space-y-4 pr-1">
         <div>
           <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Live Comments</h3>
           <div id="modalTagSummary" class="hidden flex flex-wrap gap-1.5 mb-3" aria-label="Tags from recent comments"></div>
@@ -450,6 +458,11 @@
         </div>
 
         <div>
+          <label for="proposeDetails" class="block text-xs font-semibold text-gray-400 mb-1">Party info <span class="font-normal text-gray-500">(optional)</span></label>
+          <textarea id="proposeDetails" maxlength="300" rows="2" placeholder="e.g. Neon theme, $5 cover, starts at 10pm" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"></textarea>
+        </div>
+
+        <div>
           <label for="proposeDuration" class="block text-xs font-semibold text-gray-400 mb-1">How long should it be listed? <span class="font-normal text-gray-500">(optional)</span></label>
           <select id="proposeDuration" class="js-duration-select w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"></select>
           <p class="text-[10px] text-gray-500 mt-1">One-night party? Pick a time and it removes itself afterwards.</p>
@@ -608,6 +621,10 @@
           <input type="text" id="editPartyLocation" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
         </div>
         <div>
+          <label for="editPartyDetails" class="block text-xs font-semibold text-gray-400 mb-1">Party info <span class="font-normal text-gray-500">(optional, shown in the party's details)</span></label>
+          <textarea id="editPartyDetails" maxlength="300" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white"></textarea>
+        </div>
+        <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Admin Status Override</label>
           <select id="editPartyStatus" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
             <option value="ACTIVE PARTY">🎉 Party Time</option>
@@ -701,12 +718,20 @@
     const serverNow = () => Date.now() + serverTimeOffset;
 
     // A party is only "Party Time" while it keeps getting reports; 6 hours of silence means Dead
+    // Approved proposals start unconfirmed until enough different people confirm they're happening
+    const CONFIRMATIONS_NEEDED = 3;
+    const isUnconfirmed = party => !!party && party.confirmed === false;
+
     function effectiveStatus(party) {
+      if (isUnconfirmed(party)) return 'UNCONFIRMED';
       if (!party || party.status !== 'ACTIVE PARTY') return 'QUIET';
       const updatedAt = Number(party.lastUpdatedAt);
       return Number.isFinite(updatedAt) && serverNow() - updatedAt < DEAD_AFTER_MS ? 'ACTIVE PARTY' : 'QUIET';
     }
-    function statusLabel(status) { return status === 'ACTIVE PARTY' ? '🎉 Party Time' : '💀 Dead'; }
+    function statusLabel(status) {
+      if (status === 'UNCONFIRMED') return '⏳ Unconfirmed';
+      return status === 'ACTIVE PARTY' ? '🎉 Party Time' : '💀 Dead';
+    }
 
     const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
     const HOUR_MS = 60 * 60 * 1000;
@@ -792,6 +817,7 @@
     }
 
     function hotScore(partyId, party) {
+      if (isUnconfirmed(party)) return 500 + toCount(party.confirmCount) * 50;
       const live = effectiveStatus(party) === 'ACTIVE PARTY';
       return (live ? 1000 : 0) + recentReportCount(partyId) * 50 + avgCrowdOf(party) / 10 + (toCount(party.upvotes) - toCount(party.downvotes)) * 5;
     }
@@ -1120,6 +1146,7 @@
       renderUI();
       renderAdminLocationsList();
       updateModalVoteUI();
+      updateModalConfirmUI();
 
       if (pendingSharedPartyId) {
         if (partiesData[pendingSharedPartyId]) openPartyDetailsModal(pendingSharedPartyId);
@@ -1165,8 +1192,7 @@
 
       entries.forEach(([partyId, party]) => {
         const status = effectiveStatus(party);
-        if (activeFilter === 'PARTY' && status !== 'ACTIVE PARTY') return;
-        if (activeFilter === 'QUIET' && status !== 'QUIET') return;
+        if (!matchesActiveFilter(party)) return;
 
         const isParty = status === 'ACTIVE PARTY';
         const avgCrowd = avgCrowdOf(party);
@@ -1189,7 +1215,7 @@
                 <h3 class="font-bold text-white text-base">${escapeHtml(party.name)}</h3>
                 ${party.isPermanent ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-purple-900/60 text-purple-300 border border-purple-500/30 font-semibold">Staple</span>` : ''}
               </div>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${statusLabel(status)}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${status === 'UNCONFIRMED' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : isParty ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-gray-800 text-gray-400'}">${statusLabel(status)}</span>
             </div>
             ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
             
@@ -1203,8 +1229,14 @@
             ${party.expiresAt ? `<p class="text-[10px] text-purple-300 font-medium mb-2">⏳ Listing ends in ${timeLeft(party.expiresAt - serverNow())}</p>` : ''}
 
             ${isParty && quietCount > 0 && quietCount < 3 ? `<p class="text-[10px] text-amber-400 font-medium mb-2">💀 Dead reports: ${quietCount}/3 required</p>` : ''}
+            ${status === 'UNCONFIRMED' ? `<p class="text-[10px] text-amber-300 font-medium mb-2">✅ ${Math.min(toCount(party.confirmCount), CONFIRMATIONS_NEEDED)}/${CONFIRMATIONS_NEEDED} people have confirmed it's happening</p>` : ''}
           </div>
 
+          ${status === 'UNCONFIRMED' ? `
+          <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-2 text-xs">
+            <button class="js-confirm-party px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition">✅ Confirm it's happening</button>
+            <button class="js-open-details text-purple-400 font-semibold text-xs hover:underline">Details →</button>
+          </div>` : `
           <!-- Upvote / Downvote Inline Bar -->
           <div class="flex justify-between items-center pt-3 border-t border-gray-800 mt-2 text-xs">
             <div class="flex items-center gap-2">
@@ -1216,7 +1248,7 @@
               </button>
             </div>
             <button class="js-open-details text-purple-400 font-semibold text-xs hover:underline">Details & Comments →</button>
-          </div>
+          </div>`}
         `;
         card.querySelectorAll('.js-open-details').forEach(el => {
           el.addEventListener('click', () => openPartyDetailsModal(partyId));
@@ -1224,8 +1256,13 @@
             if (e.target === el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openPartyDetailsModal(partyId); }
           });
         });
-        card.querySelector('.js-vote-up').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'up'); });
-        card.querySelector('.js-vote-down').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'down'); });
+        const confirmBtn = card.querySelector('.js-confirm-party');
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', (e) => { e.stopPropagation(); confirmParty(partyId); });
+        } else {
+          card.querySelector('.js-vote-up').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'up'); });
+          card.querySelector('.js-vote-down').addEventListener('click', (e) => { e.stopPropagation(); castPartyVote(partyId, 'down'); });
+        }
         grid.appendChild(card);
       });
 
@@ -1250,12 +1287,19 @@
             <p class="text-[10px] text-gray-400">${escapeHtml(party.location || 'No address set')}${party.expiresAt ? ` • <span class="text-purple-300">⏳ ${isExpiredParty(party) ? 'expired, removing shortly' : `removes in ${timeLeft(party.expiresAt - serverNow())}`}</span>` : ''}</p>
           </div>
           <div class="flex items-center gap-2">
+            ${isUnconfirmed(party) ? '<button class="js-admin-confirm px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded-lg font-medium">Confirm now</button>' : ''}
             <button class="js-reset-party px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium" title="Votes to 0, mark Dead, delete comments">Reset party</button>
             <button class="js-edit px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Edit / Override</button>
             <button class="js-delete px-2.5 py-1 bg-red-900/50 hover:bg-red-800/80 text-red-300 text-xs rounded-lg font-medium">Delete</button>
           </div>
         `;
         item.querySelector('.js-reset-party').addEventListener('click', () => resetParty(partyId));
+        const adminConfirm = item.querySelector('.js-admin-confirm');
+        if (adminConfirm) adminConfirm.addEventListener('click', () => {
+          if (confirm(`Mark "${party.name}" as confirmed now? It will show on the map and open for votes and comments.`)) {
+            db.ref(`parties/${partyId}`).update({ confirmed: true }).catch(err => alert('Failed: ' + err.message));
+          }
+        });
         item.querySelector('.js-edit').addEventListener('click', () => openAdminEditLocationModal(partyId));
         item.querySelector('.js-delete').addEventListener('click', () => handleAdminDeleteLocation(partyId));
         container.appendChild(item);
@@ -1359,6 +1403,7 @@
       document.getElementById('editPartyLat').value = prop.lat || DEFAULT_LAT;
       document.getElementById('editPartyLng').value = prop.lng || DEFAULT_LNG;
       fillDurationSelect(document.getElementById('editPartyDuration'), toCount(prop.durationHours));
+      document.getElementById('editPartyDetails').value = typeof prop.details === 'string' ? prop.details : '';
       document.getElementById('adminLocationModalHeader').textContent = 'Review Proposal';
       document.getElementById('editSaveBtn').textContent = 'Approve with Changes';
       document.getElementById('adminEditLocationModal').classList.remove('hidden');
@@ -1418,18 +1463,19 @@
 
       if (!name) return;
 
-      if (containsProfanity(name) || containsProfanity(location)) {
+      const details = document.getElementById('proposeDetails').value.trim();
+      if (containsProfanity(name) || containsProfanity(location) || containsProfanity(details)) {
         alert('Proposals containing prohibited language cannot be submitted.');
         return;
       }
 
       const durationHours = Number(document.getElementById('proposeDuration').value) || null;
-      whenSignedIn().then(() => submitProposal(name, location, lat, lng, durationHours)).catch(err => alert(err.message));
+      whenSignedIn().then(() => submitProposal(name, location, lat, lng, durationHours, details)).catch(err => alert(err.message));
     }
 
     const SUBMIT_COOLDOWN_MESSAGE = 'Please wait 2 minutes between submissions.';
 
-    function submitProposal(name, location, lat, lng, durationHours) {
+    function submitProposal(name, location, lat, lng, durationHours, details) {
       const newProposalRef = db.ref('proposals').push();
       const proposalData = {
         id: newProposalRef.key,
@@ -1442,6 +1488,7 @@
         createdAt: TIMESTAMP
       };
       if (durationHours) proposalData.durationHours = durationHours;
+      if (details) proposalData.details = details.slice(0, 300);
 
       db.ref().update({
         [`proposals/${newProposalRef.key}`]: proposalData,
@@ -1458,6 +1505,7 @@
           document.getElementById('proposeLng').value = '';
           document.getElementById('mapPinButtonText').textContent = 'Click to Pick Location on Map';
           document.getElementById('proposeDuration').value = '';
+          document.getElementById('proposeDetails').value = '';
           closeProposeModal();
         }
       });
@@ -1466,10 +1514,13 @@
     // A freshly approved party starts with clean counters
     const expiryFromHours = hours => (toCount(hours) ? Math.round(serverNow() + toCount(hours) * HOUR_MS) : null);
 
+    // Approved proposals need CONFIRMATIONS_NEEDED people to confirm before they're fully live
     function newPartyRecord(id, fields) {
       return Object.assign({
         id,
         status: 'ACTIVE PARTY',
+        confirmed: false,
+        confirmCount: 0,
         isPermanent: false,
         crowdReportCount: 0,
         crowdTotalSum: 0,
@@ -1487,7 +1538,8 @@
 
         db.ref().update({
           [`parties/${propId}`]: newPartyRecord(propId, {
-            name: prop.name, location: prop.location, lat: prop.lat, lng: prop.lng, expiresAt: expiryFromHours(prop.durationHours)
+            name: prop.name, location: prop.location, lat: prop.lat, lng: prop.lng, expiresAt: expiryFromHours(prop.durationHours),
+            details: typeof prop.details === 'string' && prop.details ? prop.details.slice(0, 300) : null
           }),
           [`proposals/${propId}`]: null
         }, (err) => {
@@ -1510,6 +1562,7 @@
       document.getElementById('editPartyLat').value = DEFAULT_LAT;
       document.getElementById('editPartyLng').value = DEFAULT_LNG;
       fillDurationSelect(document.getElementById('editPartyDuration'));
+      document.getElementById('editPartyDetails').value = '';
       document.getElementById('adminLocationModalHeader').textContent = 'Add New Location';
       document.getElementById('editProposalId').value = '';
       document.getElementById('editSaveBtn').textContent = 'Save Changes';
@@ -1527,6 +1580,7 @@
       document.getElementById('editPartyStatus').value = party.status || 'QUIET';
       document.getElementById('editPartyLat').value = party.lat || DEFAULT_LAT;
       document.getElementById('editPartyLng').value = party.lng || DEFAULT_LNG;
+      document.getElementById('editPartyDetails').value = typeof party.details === 'string' ? party.details : '';
       fillDurationSelect(document.getElementById('editPartyDuration'), null,
         party.expiresAt ? `Keep current timer (removes in ${timeLeft(party.expiresAt - serverNow())})` : null);
       document.getElementById('adminLocationModalHeader').textContent = 'Edit Location Info';
@@ -1553,7 +1607,8 @@
             location: document.getElementById('editPartyLocation').value.trim() || 'Campus Area',
             lat: parseFloat(document.getElementById('editPartyLat').value) || DEFAULT_LAT,
             lng: parseFloat(document.getElementById('editPartyLng').value) || DEFAULT_LNG,
-            expiresAt: expiryFromHours(document.getElementById('editPartyDuration').value)
+            expiresAt: expiryFromHours(document.getElementById('editPartyDuration').value),
+            details: document.getElementById('editPartyDetails').value.trim().slice(0, 300) || null
           }),
           [`proposals/${proposalId}`]: null
         }).then(() => {
@@ -1580,6 +1635,7 @@
       };
       const duration = document.getElementById('editPartyDuration').value;
       if (duration !== 'keep') updated.expiresAt = expiryFromHours(duration);
+      updated.details = document.getElementById('editPartyDetails').value.trim().slice(0, 300) || null;
 
       if (newStatus === 'QUIET') db.ref(`quietVoters/${id}`).remove();
       db.ref(`parties/${id}`).update(updated, (err) => {
@@ -1601,7 +1657,8 @@
           [`reportSlots/${partyId}`]: null,
           [`recentReports/${partyId}`]: null,
           [`quietVoters/${partyId}`]: null,
-          [`commentFlags/${partyId}`]: null
+          [`commentFlags/${partyId}`]: null,
+          [`partyConfirmations/${partyId}`]: null
         });
       }
     }
@@ -1714,9 +1771,13 @@
       updateModalVoteUI();
     }, () => {});
 
+    // Rapid taps would otherwise race each other and be refused by the database rules
+    const votesInFlight = new Set();
+
     function castPartyVote(partyId, voteType) {
       const party = partiesData[partyId];
-      if (!party) return;
+      if (!party || isUnconfirmed(party) || votesInFlight.has(partyId)) return;
+      votesInFlight.add(partyId);
 
       whenSignedIn().then(() => {
         const uid = auth.currentUser.uid;
@@ -1743,7 +1804,63 @@
             throw err;
           });
         });
-      }).catch(err => alert('Vote failed: ' + err.message));
+      }).catch(err => {
+        // A refused vote has already been rolled back on screen; only report unexpected errors
+        if (!err || err.code !== 'PERMISSION_DENIED') alert('Vote failed: ' + (err && err.message));
+      }).finally(() => votesInFlight.delete(partyId));
+    }
+
+    // Party info line, and the confirmation panel shown in place of votes/comments until confirmed
+    let myConfirmations = {};
+    function updateModalConfirmUI() {
+      const party = selectedPartyId && partiesData[selectedPartyId];
+      if (!party) return;
+      const info = document.getElementById('modalPartyDetails');
+      info.textContent = typeof party.details === 'string' ? party.details : '';
+      info.classList.toggle('hidden', !info.textContent);
+
+      const unconfirmed = isUnconfirmed(party);
+      document.getElementById('modalConfirmPanel').classList.toggle('hidden', !unconfirmed);
+      document.getElementById('modalVotingBar').classList.toggle('hidden', unconfirmed);
+      document.getElementById('modalCommentsSection').classList.toggle('hidden', unconfirmed);
+      if (!unconfirmed) return;
+      const count = Math.min(toCount(party.confirmCount), CONFIRMATIONS_NEEDED);
+      document.getElementById('modalConfirmText').textContent =
+        `${count}/${CONFIRMATIONS_NEEDED} people have confirmed it's happening. Once ${CONFIRMATIONS_NEEDED} people confirm, it shows on the map and opens for votes and comments.`;
+      const btn = document.getElementById('modalConfirmBtn');
+      const done = !!myConfirmations[selectedPartyId];
+      btn.disabled = done;
+      btn.textContent = done ? '✅ You confirmed this' : "✅ I can confirm it's happening";
+      btn.classList.toggle('opacity-60', done);
+    }
+
+    function confirmParty(partyId) {
+      const party = partiesData[partyId];
+      if (!party || !isUnconfirmed(party)) return;
+      whenSignedIn().then((user) => db.ref(`partyConfirmations/${partyId}/${user.uid}`).once('value').then((snap) => {
+        if (snap.exists()) {
+          myConfirmations[partyId] = true;
+          updateModalConfirmUI();
+          alert("You've already confirmed this party. It needs confirmations from different people.");
+          return;
+        }
+        if (!confirm(`Confirm that "${party.name}" is really happening?`)) return;
+        const updates = {
+          [`partyConfirmations/${partyId}/${user.uid}`]: true,
+          [`parties/${partyId}/confirmCount`]: increment(1)
+        };
+        const willConfirm = toCount(party.confirmCount) + 1 >= CONFIRMATIONS_NEEDED;
+        if (willConfirm) updates[`parties/${partyId}/confirmed`] = true;
+        return db.ref().update(updates).then(() => {
+          myConfirmations[partyId] = true;
+          updateModalConfirmUI();
+          alert(willConfirm
+            ? `Thanks! "${party.name}" is now confirmed and live on the map.`
+            : `Thanks for confirming! ${CONFIRMATIONS_NEEDED - toCount(party.confirmCount) - 1} more needed.`);
+        });
+      })).catch((err) => alert(err && err.code === 'PERMISSION_DENIED'
+        ? 'Could not confirm right now, someone may have just confirmed it too. Please try again.'
+        : 'Could not confirm: ' + (err && err.message)));
     }
 
     function updateModalVoteUI() {
@@ -2286,6 +2403,13 @@
       document.getElementById('modalPartyTitle').textContent = party.name;
       document.getElementById('modalPartyLocation').textContent = party.location || 'Campus Area';
       updateModalVoteUI();
+      updateModalConfirmUI();
+      if (isUnconfirmed(party)) {
+        // Remember whether this visitor already confirmed, so the button shows the right state
+        whenSignedIn().then(user => db.ref(`partyConfirmations/${partyId}/${user.uid}`).once('value')).then((snap) => {
+          if (snap.exists()) { myConfirmations[partyId] = true; updateModalConfirmUI(); }
+        }).catch(() => {});
+      }
 
       updateSubscriptionButtonUI();
 
@@ -2380,16 +2504,23 @@
 
     // Pins are kept per party and updated in place, so an open popup survives live updates
     const mapMarkersById = {};
+    // The map shows confirmed parties that match the All / Party Time / Dead filter, like the list
+    const matchesActiveFilter = party => activeFilter === 'ALL'
+      || (activeFilter === 'PARTY' && effectiveStatus(party) === 'ACTIVE PARTY')
+      || (activeFilter === 'QUIET' && effectiveStatus(party) === 'QUIET');
+
     function updateMapLayers() {
       if (!map) return;
 
+      const shown = visiblePartyEntries().filter(([, party]) => !isUnconfirmed(party) && matchesActiveFilter(party));
+      const shownIds = new Set(shown.map(([partyId]) => partyId));
       Object.keys(mapMarkersById).forEach(partyId => {
-        if (partiesData[partyId] && !isExpiredParty(partiesData[partyId])) return;
+        if (shownIds.has(partyId)) return;
         map.removeLayer(mapMarkersById[partyId].marker);
         delete mapMarkersById[partyId];
       });
 
-      visiblePartyEntries().forEach(([partyId, party]) => {
+      shown.forEach(([partyId, party]) => {
         const lat = Number(party.lat) || DEFAULT_LAT;
         const lng = Number(party.lng) || DEFAULT_LNG;
         const live = effectiveStatus(party) === 'ACTIVE PARTY';
@@ -2616,13 +2747,13 @@
       const select = document.getElementById('reportPartySelect');
       const selected = select.value;
       select.innerHTML = '';
-      visiblePartyEntries().forEach(([partyId, p]) => {
+      visiblePartyEntries().filter(([, p]) => !isUnconfirmed(p)).forEach(([partyId, p]) => {
         const opt = document.createElement('option');
         opt.value = partyId;
         opt.textContent = p.name;
         select.appendChild(opt);
       });
-      if (selected && partiesData[selected] && !isExpiredParty(partiesData[selected])) select.value = selected;
+      if (selected && partiesData[selected] && !isExpiredParty(partiesData[selected]) && !isUnconfirmed(partiesData[selected])) select.value = selected;
     }
 
     function openAboutModal() {
@@ -2730,6 +2861,7 @@
         updates[`votes/${partyId}/${uid}`] = null;
         updates[`reportLocks/${partyId}/${uid}`] = null;
         updates[`quietVoters/${partyId}/${uid}`] = null;
+        updates[`partyConfirmations/${partyId}/${uid}`] = null;
       });
       Object.entries(adminFlagsData).forEach(([partyId, comments]) => {
         Object.entries(comments || {}).forEach(([commentId, flaggers]) => {
