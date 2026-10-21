@@ -720,7 +720,9 @@
     // A party is only "Party Time" while it keeps getting reports; 6 hours of silence means Dead
     // Approved proposals start unconfirmed until enough different people confirm they're happening
     const CONFIRMATIONS_NEEDED = 3;
-    const isUnconfirmed = party => !!party && party.confirmed === false;
+    // Confirmed once the flag is set OR the count reaches the target, so a laggy screen that adds the
+    // final confirmation without setting the flag can never leave a party stuck at 3/3
+    const isUnconfirmed = party => !!party && party.confirmed === false && toCount(party.confirmCount) < CONFIRMATIONS_NEEDED;
 
     function effectiveStatus(party) {
       if (isUnconfirmed(party)) return 'UNCONFIRMED';
@@ -1845,18 +1847,26 @@
           return;
         }
         if (!confirm(`Confirm that "${party.name}" is really happening?`)) return;
-        const updates = {
-          [`partyConfirmations/${partyId}/${user.uid}`]: true,
-          [`parties/${partyId}/confirmCount`]: increment(1)
-        };
-        const willConfirm = toCount(party.confirmCount) + 1 >= CONFIRMATIONS_NEEDED;
-        if (willConfirm) updates[`parties/${partyId}/confirmed`] = true;
-        return db.ref().update(updates).then(() => {
-          myConfirmations[partyId] = true;
-          updateModalConfirmUI();
-          alert(willConfirm
-            ? `Thanks! "${party.name}" is now confirmed and live on the map.`
-            : `Thanks for confirming! ${CONFIRMATIONS_NEEDED - toCount(party.confirmCount) - 1} more needed.`);
+        // Use the latest count from the database, not what's on screen (which can lag)
+        return db.ref(`parties/${partyId}/confirmCount`).once('value').then((countSnap) => {
+          const current = toCount(countSnap.val());
+          if (current >= CONFIRMATIONS_NEEDED) {
+            alert(`"${party.name}" has already been confirmed.`);
+            return;
+          }
+          const willConfirm = current + 1 >= CONFIRMATIONS_NEEDED;
+          const updates = {
+            [`partyConfirmations/${partyId}/${user.uid}`]: true,
+            [`parties/${partyId}/confirmCount`]: increment(1)
+          };
+          if (willConfirm) updates[`parties/${partyId}/confirmed`] = true;
+          return db.ref().update(updates).then(() => {
+            myConfirmations[partyId] = true;
+            updateModalConfirmUI();
+            alert(willConfirm
+              ? `Thanks! "${party.name}" is now confirmed and live on the map.`
+              : `Thanks for confirming! ${CONFIRMATIONS_NEEDED - current - 1} more needed.`);
+          });
         });
       })).catch((err) => alert(err && err.code === 'PERMISSION_DENIED'
         ? 'Could not confirm right now, someone may have just confirmed it too. Please try again.'
