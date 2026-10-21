@@ -236,12 +236,13 @@
   <!-- Party Details Modal with Multi-Comment Feed & Subscribe Feature -->
   <div id="partyDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
     <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
-      <div class="flex justify-between items-start border-b border-gray-800 pb-4 mb-4">
-        <div>
-          <h2 id="modalPartyTitle" class="text-lg font-bold text-white">Party Name</h2>
-          <p id="modalPartyLocation" class="text-xs text-gray-400">Location</p>
+      <!-- On phones the title shares the top row with ✕ only, and Share/Subscribe move to a row below it -->
+      <div class="flex flex-wrap justify-between items-start gap-3 border-b border-gray-800 pb-4 mb-4">
+        <div class="min-w-0 flex-1">
+          <h2 id="modalPartyTitle" class="text-lg font-bold text-white break-words">Party Name</h2>
+          <p id="modalPartyLocation" class="text-xs text-gray-400 break-words">Location</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="order-last sm:order-none w-full sm:w-auto flex items-center gap-2">
           <button onclick="shareParty(selectedPartyId)" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 text-xs font-semibold flex items-center gap-1.5 transition">
             <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
             <span>Share</span>
@@ -251,8 +252,8 @@
             <i data-lucide="bell" class="w-3.5 h-3.5"></i>
             <span id="modalSubscribeText">Subscribe</span>
           </button>
-          <button onclick="closePartyDetailsModal()" class="text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
         </div>
+        <button onclick="closePartyDetailsModal()" class="shrink-0 text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
       </div>
 
       <!-- Live Voting Bar Inside Modal -->
@@ -712,7 +713,7 @@
     const DAY_MS = 24 * HOUR_MS;
     let activeSort = 'HOT';
     let userCoords = null;
-    const recentReportTimes = {};   // partyId -> report times (from reportLocks) in roughly the last hour
+    const recentReportTimes = {};   // partyId -> report times (from recentReports) in roughly the last hour
     const recentReportRefs = {};
 
     // Re-render at most once per animation frame when several listeners fire together
@@ -765,11 +766,12 @@
       return (recentReportTimes[partyId] || []).filter(t => t >= cutoff).length;
     }
 
-    // Each party's report locks hold the time of every visitor's latest report; count the last hour's
+    // recentReports holds the time of every visitor's latest report for a party, under a random key per
+    // visitor and party (so reports can't be traced to anyone's anonymous ID); count the last hour's
     function syncRecentReportListeners() {
       Object.keys(partiesData).forEach(partyId => {
         if (recentReportRefs[partyId]) return;
-        const ref = db.ref(`reportLocks/${partyId}`).orderByValue().startAt(serverNow() - HOUR_MS);
+        const ref = db.ref(`recentReports/${partyId}`).orderByValue().startAt(serverNow() - HOUR_MS);
         ref.on('value', (snap) => {
           recentReportTimes[partyId] = Object.values(snap.val() || {}).map(Number);
           scheduleRender();
@@ -940,11 +942,31 @@
       return !!blockedMatcher && blockedMatcher.test(normalizeForFilter(text));
     }
 
-    // Auth State Tracking: every visitor gets a silent anonymous account so the rules can rate-limit per user
+    // Auth State Tracking: every visitor gets a silent anonymous account so the rules can rate-limit per user.
+    // An email account only gets the Admin Panel once /admins/<uid> confirms it; any other account is signed out.
+    let adminLoginPending = false; // set while the login form waits for the admin check, so the panel opens after it
     auth.onAuthStateChanged((user) => {
       resolveAuthInitialized();
       if (!user) whenSignedIn().catch(() => {});
-      currentAdminUser = user && !user.isAnonymous ? user : null;
+      const adminCheck = user && !user.isAnonymous
+        ? db.ref(`admins/${user.uid}`).once('value').then(snap => (snap.val() === true ? 'admin' : 'not-admin'), () => 'unknown')
+        : Promise.resolve('visitor');
+      adminCheck.then((access) => {
+        if (auth.currentUser !== user) return; // signed in or out again while checking
+        if (access === 'not-admin' || access === 'unknown') {
+          adminLoginPending = false;
+          alert(access === 'not-admin'
+            ? "This account doesn't have admin access."
+            : "Couldn't confirm admin access for this account. Check that the latest database rules are published.");
+          auth.signOut();
+          return;
+        }
+        applyAuthState(user, access === 'admin');
+      });
+    });
+
+    function applyAuthState(user, isAdmin) {
+      currentAdminUser = isAdmin ? user : null;
       const navText = document.getElementById('adminNavText');
       const navIcon = document.getElementById('adminNavIcon');
 
@@ -979,17 +1001,16 @@
       }
       if (selectedPartyId) loadPartyComments(selectedPartyId);
       updateAdminBadges();
-      if (pendingAdminTab && user) {
-        if (currentAdminUser) {
-          openHostPanel(pendingAdminTab);
-          pendingAdminTab = null;
-        } else {
-          openLoginModal();
-        }
+      if (currentAdminUser && (adminLoginPending || pendingAdminTab)) {
+        openHostPanel(pendingAdminTab || undefined);
+        pendingAdminTab = null;
+      } else if (pendingAdminTab && user) {
+        openLoginModal();
       }
+      adminLoginPending = false;
 
       refreshIcons();
-    });
+    }
 
     function handleAdminButtonClick() {
       if (currentAdminUser) {
@@ -1004,15 +1025,16 @@
       const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
 
+      adminLoginPending = true;
       auth.signInWithEmailAndPassword(email, password)
         .then(() => {
+          // The auth listener opens the Admin Panel once /admins confirms this account
           closeLoginModal();
           document.getElementById('loginEmail').value = '';
           document.getElementById('loginPassword').value = '';
-          openHostPanel(pendingAdminTab || undefined);
-          pendingAdminTab = null;
         })
         .catch((error) => {
+          adminLoginPending = false;
           alert('Authentication Failed: ' + error.message);
         });
     }
@@ -1576,6 +1598,8 @@
           [`comments/${partyId}`]: null,
           [`votes/${partyId}`]: null,
           [`reportLocks/${partyId}`]: null,
+          [`reportSlots/${partyId}`]: null,
+          [`recentReports/${partyId}`]: null,
           [`quietVoters/${partyId}`]: null,
           [`commentFlags/${partyId}`]: null
         });
@@ -1605,12 +1629,13 @@
       whenSignedIn().then(() => {
         const uid = auth.currentUser.uid;
         const isAdmin = !!currentAdminUser;
-        const checks = isAdmin ? Promise.resolve([]) : Promise.all([
-          db.ref(`reportLocks/${partyId}/${uid}`).once('value'),
-          db.ref(`quietVoters/${partyId}/${uid}`).once('value')
+        const checks = Promise.all([
+          db.ref(`reportSlots/${partyId}/${uid}`).once('value'),
+          isAdmin ? null : db.ref(`reportLocks/${partyId}/${uid}`).once('value'),
+          isAdmin ? null : db.ref(`quietVoters/${partyId}/${uid}`).once('value')
         ]);
 
-        return checks.then(([lockSnap, voterSnap]) => {
+        return checks.then(([slotSnap, lockSnap, voterSnap]) => {
           if (lockSnap && lockSnap.exists()) {
             const waitMs = REPORT_COOLDOWN_MS - (serverNow() - lockSnap.val());
             if (waitMs > 0) {
@@ -1621,6 +1646,10 @@
 
           const p = `parties/${partyId}`;
           const updates = { [`reportLocks/${partyId}/${uid}`]: TIMESTAMP };
+          // This visitor's random key for this party in the public "reports in the last hour" list
+          const slot = slotSnap.val() || db.ref(`recentReports/${partyId}`).push().key;
+          if (!slotSnap.exists()) updates[`reportSlots/${partyId}/${uid}`] = slot;
+          updates[`recentReports/${partyId}/${slot}`] = TIMESTAMP;
           if (headcountInput > 0) {
             updates[`${p}/crowdReportCount`] = increment(1);
             updates[`${p}/crowdTotalSum`] = increment(Math.min(headcountInput, 2000));
@@ -2543,17 +2572,15 @@
       whenSignedIn().then((user) => db.ref().update({
         [`${path}/${db.ref(path).push().key}`]: { description: text, submittedAt: new Date().toISOString(), createdAt: TIMESTAMP },
         [`submitLocks/${user.uid}`]: TIMESTAMP
-      }, (error) => {
-        if (!error) {
-          const isBug = feedbackType === 'BUG';
+      })).then(() => {
+        const isBug = feedbackType === 'BUG';
 
-          document.getElementById('feedbackText').value = '';
-          closeFeedbackModal();
-          alert(`Thank you! Your ${isBug ? 'bug report' : 'feature request'} has been submitted.`);
-        } else {
-          alert(error.code === 'PERMISSION_DENIED' ? SUBMIT_COOLDOWN_MESSAGE : 'Failed to submit: ' + error.message);
-        }
-      })).catch(err => alert(err.message));
+        document.getElementById('feedbackText').value = '';
+        closeFeedbackModal();
+        alert(`Thank you! Your ${isBug ? 'bug report' : 'feature request'} has been submitted.`);
+      }).catch((error) => {
+        alert(error.code === 'PERMISSION_DENIED' ? SUBMIT_COOLDOWN_MESSAGE : 'Failed to submit: ' + error.message);
+      });
     }
 
     function openFeedbackModal() { document.getElementById('feedbackModal').classList.remove('hidden'); }
@@ -2713,8 +2740,17 @@
         if (req && req.uid === uid) updates[`deletionRequests/${requestId}`] = null;
       });
 
-      db.ref('reportLog').orderByChild('uid').equalTo(uid).once('value').then((snap) => {
-        snap.forEach(child => { updates[`reportLog/${child.key}`] = null; });
+      Promise.all([
+        db.ref('reportLog').orderByChild('uid').equalTo(uid).once('value'),
+        db.ref('reportSlots').once('value')
+      ]).then(([logSnap, slotsSnap]) => {
+        logSnap.forEach(child => { updates[`reportLog/${child.key}`] = null; });
+        slotsSnap.forEach(party => {
+          const slot = party.child(uid).val();
+          if (!slot) return;
+          updates[`reportSlots/${party.key}/${uid}`] = null;
+          updates[`recentReports/${party.key}/${slot}`] = null;
+        });
         return db.ref().update(updates);
       }).then(() => {
         document.getElementById('deleteVisitorIdInput').value = '';
