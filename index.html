@@ -583,7 +583,7 @@
               <i data-lucide="eraser" class="w-4 h-4"></i> Cleanup Tools
             </h3>
             <div class="flex flex-wrap gap-2">
-              <button onclick="resetAllVotes()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Reset all votes now</button>
+              <button onclick="resetAllVotes()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Reset all votes &amp; crowds now</button>
               <button onclick="clearOldReportHistory()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg font-medium">Clear report history older than 30 days</button>
             </div>
             <p class="text-[10px] text-gray-500 mt-2">Comments delete themselves after 12 hours, and all votes reset every day at 8am. Use "Reset party" in the Locations tab to zero a party's votes, mark it Dead and clear its comments.</p>
@@ -1222,7 +1222,7 @@
             ${party.location ? `<p class="text-xs text-gray-400 mb-3">${escapeHtml(party.location)}</p>` : ''}
             
             <div class="flex items-center gap-4 text-xs text-gray-400 mb-3">
-              <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>
+              ${isParty ? `<span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-purple-400"></i> ${avgCrowd} avg crowd</span>` : ''}
               <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i> ${timeAgo(party.lastUpdatedAt)}</span>
               ${distance !== null ? `<span class="flex items-center gap-1">📍 ${distance < 10 ? distance.toFixed(1) : Math.round(distance)} mi</span>` : ''}
             </div>
@@ -1635,6 +1635,10 @@
         quietReportsCount: newStatus === 'QUIET' ? 0 : (existing.quietReportsCount || 0),
         lastUpdatedAt: TIMESTAMP
       };
+      if ((newStatus === 'QUIET') !== (effectiveStatus(existing) === 'QUIET')) {
+        updated.crowdReportCount = 0;
+        updated.crowdTotalSum = 0;
+      }
       const duration = document.getElementById('editPartyDuration').value;
       if (duration !== 'keep') updated.expiresAt = expiryFromHours(duration);
       updated.details = document.getElementById('editPartyDetails').value.trim().slice(0, 300) || null;
@@ -1709,13 +1713,20 @@
           const slot = slotSnap.val() || db.ref(`recentReports/${partyId}`).push().key;
           if (!slotSnap.exists()) updates[`reportSlots/${partyId}/${uid}`] = slot;
           updates[`recentReports/${partyId}/${slot}`] = TIMESTAMP;
-          if (headcountInput > 0) {
+          const crowd = Math.min(headcountInput, 2000);
+          if (statusType !== 'quiet' && effectiveStatus(party) === 'QUIET') {
+            // A dead party coming back to Party Time starts a fresh crowd average
+            updates[`${p}/crowdReportCount`] = crowd > 0 ? 1 : 0;
+            updates[`${p}/crowdTotalSum`] = crowd;
+          } else if (crowd > 0) {
             updates[`${p}/crowdReportCount`] = increment(1);
-            updates[`${p}/crowdTotalSum`] = increment(Math.min(headcountInput, 2000));
+            updates[`${p}/crowdTotalSum`] = increment(crowd);
           }
 
           let message;
           const markDead = () => {
+            updates[`${p}/crowdReportCount`] = 0; // a dead party has no crowd
+            updates[`${p}/crowdTotalSum`] = 0;
             updates[`${p}/status`] = 'QUIET';
             updates[`${p}/quietReportsCount`] = 0;
             updates[`${p}/lastUpdatedAt`] = TIMESTAMP;
@@ -2368,10 +2379,12 @@
     // Fresh start for one party: votes to 0, marked Dead, comments deleted
     function resetParty(partyId) {
       const party = partiesData[partyId];
-      if (!party || !confirm(`Reset "${party.name}"?\n\nThis sets its votes to 0, marks it 💀 Dead, and deletes all of its comments.`)) return;
+      if (!party || !confirm(`Reset "${party.name}"?\n\nThis sets its votes and average crowd to 0, marks it 💀 Dead, and deletes all of its comments.`)) return;
       db.ref().update({
         [`parties/${partyId}/upvotes`]: 0,
         [`parties/${partyId}/downvotes`]: 0,
+        [`parties/${partyId}/crowdReportCount`]: 0,
+        [`parties/${partyId}/crowdTotalSum`]: 0,
         [`parties/${partyId}/status`]: 'QUIET',
         [`parties/${partyId}/quietReportsCount`]: 0,
         [`parties/${partyId}/lastUpdatedAt`]: TIMESTAMP,
@@ -2384,13 +2397,15 @@
 
 
     function resetAllVotes() {
-      if (!confirm("Reset every party's 👍/👎 to 0 now?")) return;
+      if (!confirm("Reset every party's 👍/👎 and average crowd to 0 now?")) return;
       const updates = { votes: null, 'config/votesResetAt': TIMESTAMP };
       Object.keys(partiesData).forEach(id => {
         updates[`parties/${id}/upvotes`] = 0;
         updates[`parties/${id}/downvotes`] = 0;
+        updates[`parties/${id}/crowdReportCount`] = 0;
+        updates[`parties/${id}/crowdTotalSum`] = 0;
       });
-      db.ref().update(updates).then(() => alert('All votes reset.'), err => alert('Reset failed: ' + err.message));
+      db.ref().update(updates).then(() => alert('All votes and crowd averages reset.'), err => alert('Reset failed: ' + err.message));
     }
 
     function clearOldReportHistory() {
@@ -2575,7 +2590,7 @@
       details.style.cssText = 'color:#9ca3af;margin:4px 0 8px;line-height:1.5';
       const lines = [];
       if (recent > 0) lines.push(`🔥 ${recent} report${recent === 1 ? '' : 's'} in the last hour`);
-      if (avgCrowdOf(party) > 0) lines.push(`👥 ${avgCrowdOf(party)} avg crowd`);
+      if (live && avgCrowdOf(party) > 0) lines.push(`👥 ${avgCrowdOf(party)} avg crowd`);
       lines.push(`🕒 Updated ${timeAgo(party.lastUpdatedAt)}${stale ? ' (may be outdated)' : ''}`);
       details.textContent = lines.join('\n');
       details.style.whiteSpace = 'pre-line';
