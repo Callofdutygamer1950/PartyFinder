@@ -212,6 +212,12 @@
           <span>About &amp; Rules</span>
         </button>
 
+        <!-- How it works: reopens the first-visit tour -->
+        <button onclick="openWelcomeModal()" class="px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-500 rounded-xl flex items-center gap-1.5 transition">
+          <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+          <span>How it works</span>
+        </button>
+
         <!-- Install App Button (shown when the browser supports installing) -->
         <button onclick="handleInstallClick()" id="installAppBtn" class="hidden px-3.5 py-2 text-xs font-medium bg-gray-800/80 hover:bg-gray-800 text-sky-400 border border-sky-500/30 hover:border-sky-500/60 rounded-xl flex items-center gap-1.5 transition">
           <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
@@ -654,6 +660,89 @@
           <button type="submit" id="editSaveBtn" class="px-4 py-1.5 text-xs bg-purple-600 text-white font-semibold rounded-lg">Save Changes</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- First-visit tour (reopened from "How it works"). Kept last so it sits above any popup a shared link opens.
+       Until a visitor agrees on the last card, it can't be closed. -->
+  <div id="welcomeModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+    <div class="bg-gray-900 border border-purple-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-[11px] font-bold text-purple-400 uppercase tracking-wider">How Drop the Addy works</h2>
+        <button id="welcomeCloseBtn" onclick="closeWelcomeModal()" class="hidden text-gray-400 hover:text-white text-sm font-bold p-1">✕</button>
+      </div>
+
+      <section data-welcome-step class="space-y-3 text-xs text-gray-300 leading-relaxed">
+        <div class="w-11 h-11 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center"><i data-lucide="radio" class="w-5 h-5"></i></div>
+        <h3 class="text-lg font-bold text-white">Welcome to Drop the Addy</h3>
+        <p>An anonymous, live map of what's happening around Slippery Rock. No account, name or email needed.</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>See every spot as a <strong class="text-white">Grid</strong> or on the <strong class="text-white">Map</strong>.</li>
+          <li>Filter by <strong class="text-white">🎉 Party Time</strong> or <strong class="text-white">💀 Dead</strong>, and sort by Hottest, Near me or Newest.</li>
+          <li>Tap a spot for its votes, comments and alerts.</li>
+        </ul>
+      </section>
+
+      <section data-welcome-step class="hidden space-y-3 text-xs text-gray-300 leading-relaxed">
+        <div class="w-11 h-11 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-400 flex items-center justify-center"><i data-lucide="send" class="w-5 h-5"></i></div>
+        <h3 class="text-lg font-bold text-white">Report what you see</h3>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong class="text-white">🎉 Party Time:</strong> one report marks a spot as live.</li>
+          <li><strong class="text-white">💀 Dead</strong> takes reports from 3 different people, so no one can shut a party down alone.</li>
+          <li>You can update each spot once every 15 minutes, and add a crowd estimate if you like.</li>
+          <li>A spot with no reports for 6 hours goes back to Dead on its own.</li>
+          <li>New spots show <strong class="text-white">⏳ Unconfirmed</strong> until 3 people confirm they're really happening.</li>
+        </ul>
+      </section>
+
+      <section data-welcome-step class="hidden space-y-3 text-xs text-gray-300 leading-relaxed">
+        <div class="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center"><i data-lucide="message-circle" class="w-5 h-5"></i></div>
+        <h3 class="text-lg font-bold text-white">Vote, comment and share</h3>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong class="text-white">👍/👎</strong> one vote per spot. All votes reset every day at 8am.</li>
+          <li>Leave a short comment and tags like 🎵 Good music or 🍺 BYOB. Comments disappear after 12 hours.</li>
+          <li>See something bad? Tap <strong class="text-white">🚩 Flag</strong>. Comments flagged by 3 people are hidden.</li>
+          <li><strong class="text-white">Share</strong> sends friends a link straight to that spot.</li>
+        </ul>
+      </section>
+
+      <section data-welcome-step class="hidden space-y-3 text-xs text-gray-300 leading-relaxed">
+        <div class="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center"><i data-lucide="bell" class="w-5 h-5"></i></div>
+        <h3 class="text-lg font-bold text-white">Get alerts and add spots</h3>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Open a spot and tap <strong class="text-white">Subscribe</strong> to get a notification when it turns 🎉 Party Time or 💀 Dead.</li>
+          <li>On iPhone, first tap Share → <strong class="text-white">Add to Home Screen</strong> and open Drop the Addy from there. iOS only sends alerts to installed web apps.</li>
+          <li>Know a spot that's missing? Tap <strong class="text-white">Propose Party</strong>. An admin reviews it first.</li>
+        </ul>
+      </section>
+
+      <section data-welcome-step class="hidden space-y-3 text-xs text-gray-300 leading-relaxed">
+        <div class="w-11 h-11 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+        <h3 class="text-lg font-bold text-white">Before you start</h3>
+        <p>Drop the Addy is for adults <strong class="text-white">18 and over</strong>. By continuing you agree to the community rules:</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>No slurs, threats, harassment, or personal information about anyone.</li>
+          <li>Don't post fake reports or propose places that aren't real.</li>
+          <li>Stay safe: watch your drink, leave with your friends, and use the <strong class="text-white">Get Home Safe</strong> numbers on the main page. In an emergency, call 911.</li>
+        </ul>
+        <p class="text-gray-500">Your browser gets an anonymous ID and your location is never stored. See the <a href="privacy.html" class="text-purple-400 hover:underline">Privacy Policy</a>.</p>
+      </section>
+
+      <div class="flex justify-center gap-1.5 mt-5" aria-hidden="true">
+        <span data-welcome-dot class="w-2 h-2 rounded-full bg-gray-700"></span>
+        <span data-welcome-dot class="w-2 h-2 rounded-full bg-gray-700"></span>
+        <span data-welcome-dot class="w-2 h-2 rounded-full bg-gray-700"></span>
+        <span data-welcome-dot class="w-2 h-2 rounded-full bg-gray-700"></span>
+        <span data-welcome-dot class="w-2 h-2 rounded-full bg-gray-700"></span>
+      </div>
+      <div class="flex items-center justify-between gap-3 mt-4">
+        <button id="welcomeBackBtn" type="button" onclick="welcomeGo(-1)" class="px-3 py-2 text-xs text-gray-400 hover:text-white">Back</button>
+        <div class="flex items-center gap-2">
+          <button id="welcomeSkipBtn" type="button" onclick="welcomeGo(Infinity)" class="px-3 py-2 text-xs text-gray-400 hover:text-white">Skip</button>
+          <button id="welcomeNextBtn" type="button" onclick="welcomeGo(1)" class="px-4 py-2 text-xs bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl">Next</button>
+          <button id="welcomeAgreeBtn" type="button" onclick="acceptWelcome()" class="hidden px-4 py-2 text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl">I'm 18+ and agree</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2926,7 +3015,8 @@
       proposeModal: () => closeProposeModal(),
       loginModal: () => closeLoginModal(),
       hostModal: () => closeHostModal(),
-      adminEditLocationModal: () => closeAdminEditLocationModal()
+      adminEditLocationModal: () => closeAdminEditLocationModal(),
+      welcomeModal: () => closeWelcomeModal()
     };
     const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
     const openModalStack = [];
@@ -2992,6 +3082,52 @@
       }
     });
 
+    // ---- First-visit tour: how the app works, ending with the 18+ / community rules agreement ----
+    // Remembered per browser. Before agreeing, Esc, the backdrop and Skip only lead to the last card.
+    const WELCOME_KEY = 'welcomeAccepted';
+    const hasAcceptedWelcome = () => localStorage.getItem(WELCOME_KEY) === '1';
+    let welcomeStep = 0;
+
+    function openWelcomeModal() {
+      showWelcomeStep(0);
+      document.getElementById('welcomeModal').classList.remove('hidden');
+    }
+
+    function showWelcomeStep(step) {
+      const steps = document.querySelectorAll('[data-welcome-step]');
+      welcomeStep = Math.max(0, Math.min(step, steps.length - 1));
+      const last = welcomeStep === steps.length - 1;
+      const accepted = hasAcceptedWelcome();
+      steps.forEach((el, i) => el.classList.toggle('hidden', i !== welcomeStep));
+      document.querySelectorAll('[data-welcome-dot]').forEach((dot, i) => {
+        dot.classList.toggle('bg-purple-400', i === welcomeStep);
+        dot.classList.toggle('bg-gray-700', i !== welcomeStep);
+      });
+      document.getElementById('welcomeBackBtn').classList.toggle('invisible', welcomeStep === 0);
+      document.getElementById('welcomeSkipBtn').classList.toggle('hidden', last || accepted);
+      document.getElementById('welcomeNextBtn').classList.toggle('hidden', last);
+      const agreeBtn = document.getElementById('welcomeAgreeBtn');
+      agreeBtn.classList.toggle('hidden', !last);
+      agreeBtn.textContent = accepted ? 'Done' : "I'm 18+ and agree";
+      document.getElementById('welcomeCloseBtn').classList.toggle('hidden', !accepted);
+    }
+
+    function welcomeGo(delta) {
+      showWelcomeStep(welcomeStep + delta);
+      const last = welcomeStep === document.querySelectorAll('[data-welcome-step]').length - 1;
+      document.getElementById(last ? 'welcomeAgreeBtn' : 'welcomeNextBtn').focus();
+    }
+
+    function acceptWelcome() {
+      localStorage.setItem(WELCOME_KEY, '1');
+      document.getElementById('welcomeModal').classList.add('hidden');
+    }
+
+    function closeWelcomeModal() {
+      if (hasAcceptedWelcome()) document.getElementById('welcomeModal').classList.add('hidden');
+      else welcomeGo(Infinity);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       setupAccessibleModals();
       fillDurationSelect(document.getElementById('proposeDuration'));
@@ -2999,6 +3135,7 @@
       renderUI();
       setInterval(renderUI, 60 * 1000);
       refreshIcons();
+      if (!hasAcceptedWelcome()) openWelcomeModal();
     });
   </script>
 </body>
