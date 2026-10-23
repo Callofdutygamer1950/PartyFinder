@@ -3103,7 +3103,9 @@
         dot.classList.toggle('bg-purple-400', i === welcomeStep);
         dot.classList.toggle('bg-gray-700', i !== welcomeStep);
       });
-      document.getElementById('welcomeBackBtn').classList.toggle('invisible', welcomeStep === 0);
+      const backBtn = document.getElementById('welcomeBackBtn');
+      backBtn.classList.toggle('invisible', welcomeStep === 0);
+      backBtn.disabled = welcomeStep === 0; // keeps the hidden button out of the Tab order
       document.getElementById('welcomeSkipBtn').classList.toggle('hidden', last || accepted);
       document.getElementById('welcomeNextBtn').classList.toggle('hidden', last);
       const agreeBtn = document.getElementById('welcomeAgreeBtn');
