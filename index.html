@@ -753,7 +753,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
   <script>
-    // Injected via GitHub Actions environment secrets build step
+    // Firebase web config, filled in at deploy time. These values are public by design (every visitor's
+    // browser needs them); the database rules are what protect the data.
     const firebaseConfig = {
       apiKey: "__FIREBASE_API_KEY__",
       authDomain: "__FIREBASE_AUTH_DOMAIN__",
